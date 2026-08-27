@@ -1,4 +1,4 @@
-package com.poasherkir.delivery_os
+package dz.deliveryos.driver
 
 import io.flutter.embedding.android.FlutterActivity
 
