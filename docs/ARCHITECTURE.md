@@ -81,13 +81,21 @@ Add `delivery_type: home | stopdesk` and exclude stop-desk from route optimizati
 
 ### 1.5 Missing: address structure
 
-Algeria has 58 wilayas and roughly 1,500 communes, and every carrier's pricing and routing is organized around them. Free-text addresses are unusable. Your address model must be:
+Algeria has **69 wilayas** and roughly 1,541 communes, and every carrier's pricing and routing is organized around them. Free-text addresses are unusable. Your address model must be:
 
 ```
-wilaya_code (1–58) → commune_id → free_text_detail → coordinates + confidence
+wilaya_code → commune_id → free_text_detail → coordinates + confidence
 ```
 
-Ship the wilaya/commune reference list as a bundled asset in the app. It never changes and it makes the address field a two-tap picker instead of a typing exercise.
+Ship the wilaya/commune reference list as a bundled asset in the app. It makes the address field a two-tap picker instead of a typing exercise.
+
+**The count is not stable, so never hardcode it.** Algeria went from 48 wilayas to 58 in 2019, and to 69 on 16 November 2025 with the creation of Aflou, Barika, Ksar Chellala, Messaad, Aïn Oussera, Boussaâda, El Abiodh Sidi Cheikh, El Kantara, Bir El Ater, Ksar El Boukhari and El Aricha. It will change again. Therefore:
+
+- no `1..58` (or `1..69`) range constraint anywhere, in the schema or in validation
+- no test asserting a row count or a contiguous code range
+- a wilaya code is valid if and only if it exists in the bundled `wilayas` table
+
+**Open question, to resolve before M4:** carriers often lag administrative reform, so a delivery company may still price and zone by the 58-wilaya structure while the state uses 69. If a `tiered_by_wilaya` rule from a real company does not line up with the bundled dataset, that is this problem surfacing — do not silently remap it.
 
 ### 1.6 Missing: Arabic and RTL
 
@@ -291,7 +299,7 @@ Batches, orders, customers with learned pins, companies with payment rules, on-d
 | State | Riverpod | See §8.2 |
 | Navigation | go_router | Same as BP Go |
 | Local DB | **Drift** (SQLite) | See §6 |
-| Map rendering | `flutter_map` + Mapbox vector/raster tiles | Swappable to OSM tiles at zero cost |
+| Map rendering | **`mapbox_maps_flutter`** (official SDK) | Mapbox's terms restrict tile consumption to their own SDKs, so `flutter_map` + Mapbox tiles is not a licensable route. Fallback if binary size or SDK complexity bites at M4: MapLibre with a ToS-clean tile source. |
 | Matrix / routing | **Mapbox Matrix API** | See §5.2 |
 | Turn-by-turn | Deep link: Google Maps → Waze → Yandex fallback | Do not build |
 | Optimizer (MVP) | Pure Dart NN + 2-opt / Or-opt | On-device, offline |
@@ -406,7 +414,7 @@ CREATE TABLE payment_rules (
 
 -- ============ GEOGRAPHY REFERENCE (bundled asset) ============
 CREATE TABLE wilayas (
-  code       SMALLINT PRIMARY KEY,     -- 1..58
+  code       SMALLINT PRIMARY KEY,     -- no range constraint: see §1.5
   name_fr    TEXT NOT NULL,
   name_ar    TEXT NOT NULL,
   centroid   GEOGRAPHY(POINT,4326) NOT NULL
@@ -938,8 +946,8 @@ test/
 └── integration/
 
 assets/
-├── geo/wilayas.json             58 wilayas
-└── geo/communes.json            ~1500 communes
+├── geo/wilayas.json             all wilayas (69 as of Nov 2025; never hardcode the count)
+└── geo/communes.json            ~1541 communes
 ```
 
 Each `features/<x>/` folder holds `presentation/` (screens, widgets) and `controllers/`. Domain and data stay centralized so the layering rule is visible in the tree.
@@ -1129,6 +1137,31 @@ Supported value types: `fixed`, `percent_of` (with a named base), `tiered_by_wil
 - Integer arithmetic only, in centimes; rounding is banker's rounding, applied once, at the final step
 - Deterministic: same inputs always produce the same output, on device and on server
 - `payment_rule_version` is stamped on the order at creation. Editing a company's rule creates version N+1 and never touches historical orders.
+
+**One rounded value per order.** "Applied once, at the final step" is not
+precise enough on its own, so state it as a hard rule: an evaluation produces
+**at most one rounded monetary value per order**, and every other component is
+derived from it by subtraction from `cod_amount`.
+
+```
+driver_commission = round(<rule expression>)          // the only rounding
+company_amount    = cod_amount − driver_commission − other_fees
+```
+
+Rounding `driver_commission` and `company_amount` independently is how
+`Σ company_amount + Σ driver_commission == Σ collected_amount` silently stops
+holding: two half-centime roundings in the same direction, forty orders, and the
+day is off by 20 centimes with no single order visibly wrong. Deriving the
+residual by subtraction makes the sum exact by construction, not by luck.
+
+Where a company's rule is naturally expressed the other way around — a fixed
+company amount with the driver taking the remainder — the rule spec **designates
+which field is computed and which is the residual**. It is a property of the
+spec, not a convention in the evaluator. The evaluator reads it and never
+guesses.
+
+This is invariant 1 in `CLAUDE.md`, and the property tests in §16 are what keep
+it honest.
 
 ### 12.3 Settlement integrity
 
