@@ -118,6 +118,16 @@ being asked.
   version against a seeded DB. No exceptions.
 - **When you are uncertain about a domain rule** (commission formulas, retour
   handling, stop-desk behaviour), ask. Do not invent business logic.
+- **Never pipe a gate command.** `flutter analyze | tail -3` reports the exit
+  code of `tail`, not of `analyze`, so a failing gate passes silently — and the
+  same is true of `| head`, `| grep`, `| tee`. Verification commands
+  (`flutter analyze`, `flutter test`, `dart format --set-exit-if-changed`,
+  `flutter build`) run bare, with their full output shown. If a pipe is
+  genuinely unavoidable, `set -o pipefail` first and echo the real exit code.
+- **Amend freely while unpushed, never after.** A commit that fails its own CI
+  gate must not sit permanently in history, so fix it by amending while the
+  branch is still local. Once a commit is on the remote it is immutable: fix
+  forward with a separate commit.
 
 ---
 
