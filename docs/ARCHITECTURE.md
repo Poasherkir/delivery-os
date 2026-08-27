@@ -942,8 +942,11 @@ lib/
 test/
 ├── domain/                      pure, fast, the majority
 ├── data/                        DAO tests on in-memory SQLite
-├── widget/
-└── integration/
+└── widget/
+
+integration_test/               on-device scenarios (§16). NOT test/integration/:
+                                the integration_test package only discovers
+                                tests in this directory at the repo root.
 
 assets/
 ├── geo/wilayas.json             all wilayas (69 as of Nov 2025; never hardcode the count)
