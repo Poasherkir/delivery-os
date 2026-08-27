@@ -52,3 +52,9 @@ android/key.properties
 *.keystore
 .env
 .env.*
+
+# Generated Dart sources (*.g.dart, *.drift.dart, l10n output) are COMMITTED,
+# not ignored. A fresh clone opens in the IDE without a build_runner pass and
+# CI stays fast; the cost is noisy diffs, which is the accepted trade.
+# They are excluded from `flutter analyze` (analysis_options.yaml) and from the
+# CI format gate (.github/workflows/ci.yml), not from version control.

@@ -60,8 +60,20 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      # `dart format` does not read the analyzer's exclude list, so a bare
+      # directory walk would gate on generated sources too. build_runner
+      # formats its own output, but flutter gen-l10n is less predictable and
+      # lands first (M0-05). Filter to hand-written files: the gate is not
+      # weakened, it is aimed. A failure here is a file you wrote.
       - name: Check formatting
-        run: dart format --set-exit-if-changed .
+        run: |
+          files=$(git ls-files '*.dart' \
+            | grep -vE '\.(g|freezed|drift|mocks)\.dart$|/generated/' || true)
+          if [ -z "$files" ]; then
+            echo 'No hand-written Dart files to check.'
+            exit 0
+          fi
+          echo "$files" | xargs dart format --set-exit-if-changed
 
       # --fatal-infos is deliberate. It is only tolerable because
       # analysis_options.yaml excludes generated sources; without those
