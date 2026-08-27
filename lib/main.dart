@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'core/theme/font_license.dart';
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   runApp(const DeliveryOsApp());
 }
 
