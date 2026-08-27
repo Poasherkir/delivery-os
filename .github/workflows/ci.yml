@@ -73,18 +73,9 @@ jobs:
       - name: Test
         run: flutter test
 
+      # No artifact upload. The build succeeding is the gate; a 146 MB fat
+      # unshrunk debug APK is not something you would hand a field tester, and
+      # it is cheaper to build locally. A release APK upload returns at M5,
+      # when there are testers who need one.
       - name: Build debug APK
         run: flutter build apk --debug
-
-      # The build above is the gate; this upload is a convenience. A debug APK
-      # is ~146 MB (fat, unshrunk, all ABIs), so uploading one per push would
-      # burn a free-tier artifact quota in a handful of commits. Default branch
-      # only, short retention.
-      - name: Upload debug APK
-        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
