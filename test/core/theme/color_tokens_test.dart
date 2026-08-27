@@ -4,6 +4,12 @@ import 'package:delivery_os/core/theme/tokens/tokens.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Distance between the strongest and weakest channel: 0 is a pure grey.
+/// Preferred over HSL saturation, which explodes for near-white and near-black
+/// neutrals and would call #F2F5F8 "saturated".
+double _chroma(Color c) =>
+    math.max(c.r, math.max(c.g, c.b)) - math.min(c.r, math.min(c.g, c.b));
+
 double _contrast(Color a, Color b) {
   final double la = a.computeLuminance();
   final double lb = b.computeLuminance();
@@ -99,6 +105,36 @@ void main() {
         final ColorTokens t = theme.value;
         expect(t.moneyOwedFg, isNot(t.statusProblemFg));
         expect(t.moneyOwedBg, isNot(t.statusProblemBg));
+      });
+
+      test('hue encodes ownership in ${theme.key}', () {
+        // One rule for the driver to learn: colour means the money is yours.
+        // "Achromatic" is measured against this theme's own neutral ramp
+        // rather than against zero — the dark neutrals are deliberately
+        // cool-tinted, and a fixed threshold would either fail on them or be
+        // too loose to catch a real tint.
+        final ColorTokens t = theme.value;
+        final double neutralCeiling = <Color>[
+          t.canvas,
+          t.surface,
+          t.surfaceRaised,
+          t.surfaceSunken,
+          t.border,
+          t.textPrimary,
+          t.textSecondary,
+        ].map(_chroma).reduce(math.max);
+
+        expect(
+          _chroma(t.moneyOwedFg),
+          lessThanOrEqualTo(neutralCeiling),
+          reason: 'money held for the company must sit in the neutral ramp',
+        );
+        expect(_chroma(t.moneyOwedBg), lessThanOrEqualTo(neutralCeiling));
+        expect(
+          _chroma(t.moneyEarningFg),
+          greaterThan(neutralCeiling * 3),
+          reason: 'earnings carry a hue because the money is the drivers',
+        );
       });
     }
   });

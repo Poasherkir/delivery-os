@@ -31,6 +31,14 @@ abstract final class TypeTokens {
   /// heavier. Asserted in the token tests.
   static const double minSizeForRegularWeight = 14;
 
+  /// Absolute floor. Nothing that carries information renders below this — an
+  /// outdoor, one-handed app does not get to solve density problems with small
+  /// type. Decoration may go smaller; content may not.
+  static const double minInformationalSize = 12;
+
+  /// Captions and metadata stop here, a step above the absolute floor.
+  static const double captionFloor = 13;
+
   static TextStyle _style(double size, double height, FontWeight weight) =>
       TextStyle(
         fontFamily: family,
@@ -47,9 +55,9 @@ abstract final class TypeTokens {
   static final TextStyle title = _style(20, 1.30, semiBold);
   static final TextStyle subtitle = _style(17, 1.35, medium);
   static final TextStyle body = _style(16, 1.45, regular);
-  static final TextStyle bodySmall = _style(14, 1.45, regular);
-  static final TextStyle label = _style(13, 1.35, medium);
-  static final TextStyle caption = _style(12, 1.35, medium);
+  static final TextStyle bodySmall = _style(15, 1.45, regular);
+  static final TextStyle label = _style(14, 1.35, medium);
+  static final TextStyle caption = _style(13, 1.35, medium);
 
   // ---- Money -------------------------------------------------------------
   // A separate ramp because dinar amounts are read in columns, not in prose.

@@ -101,13 +101,28 @@ class ColorTokens {
   final Color statusProblemFg;
   final Color statusProblemBg;
 
-  /// Money the driver keeps.
+  /// Money the driver keeps: commission, gross, net.
+  ///
+  /// See the ownership rule on [moneyOwedFg].
   final Color moneyEarningFg;
   final Color moneyEarningBg;
 
-  /// Money held on the company's behalf. Custodial, not an error — this must
-  /// never be the problem red. A driver holding 400 000 DA is not in a failure
-  /// state.
+  /// Money that is not the driver's: collected COD, owed to the company, cash
+  /// on hand. **Deliberately achromatic.**
+  ///
+  /// Hue encodes *ownership*, not category, which gives the driver one rule to
+  /// learn — colour means it is yours — instead of a fresh association per
+  /// screen:
+  ///
+  /// * mine (earnings, net) → [moneyEarningFg], which carries a hue
+  /// * not mine (collected, owed, cash on hand) → these, which do not
+  /// * spent (expenses) → the problem hue. There is deliberately no separate
+  ///   expense token; expenses reuse [statusProblemFg] / [statusProblemBg].
+  ///
+  /// Magnitude and anxiety are carried by size and weight, not by hue. Cash on
+  /// hand is the number a driver is most nervous about, so it is rendered
+  /// large and neutral — `TypeTokens.moneyLarge` — rather than small and
+  /// coloured. A driver holding 400 000 DA is not in a failure state.
   final Color moneyOwedFg;
   final Color moneyOwedBg;
 
@@ -173,8 +188,8 @@ class ColorTokens {
     statusProblemBg: Color(0xFFFBE4E2),
     moneyEarningFg: Color(0xFF06605C),
     moneyEarningBg: Color(0xFFDBF0EE),
-    moneyOwedFg: Color(0xFF6B3A86),
-    moneyOwedBg: Color(0xFFF0E5F5),
+    moneyOwedFg: Color(0xFF14181D),
+    moneyOwedBg: Color(0xFFE4E8EE),
     scrim: Color(0x8014181D),
   );
 
@@ -204,8 +219,8 @@ class ColorTokens {
     statusProblemBg: Color(0xFF35191A),
     moneyEarningFg: Color(0xFF4FD1C5),
     moneyEarningBg: Color(0xFF0E2B2A),
-    moneyOwedFg: Color(0xFFC79BE0),
-    moneyOwedBg: Color(0xFF271A31),
+    moneyOwedFg: Color(0xFFF2F5F8),
+    moneyOwedBg: Color(0xFF232A33),
     scrim: Color(0xB3000000),
   );
 }

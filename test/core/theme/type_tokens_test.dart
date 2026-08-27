@@ -54,6 +54,16 @@ void main() {
         expect(style.fontFeatures, anyOf(isNull, isEmpty));
       });
 
+      test('$name respects the informational size floor', () {
+        expect(
+          style.fontSize,
+          greaterThanOrEqualTo(TypeTokens.minInformationalSize),
+          reason:
+              '$name is ${style.fontSize}sp — nothing carrying information '
+              'renders below ${TypeTokens.minInformationalSize}sp',
+        );
+      });
+
       test('$name is not a thin weight at a small size', () {
         if (style.fontSize! < TypeTokens.minSizeForRegularWeight) {
           expect(
@@ -67,6 +77,20 @@ void main() {
         }
       });
     });
+  });
+
+  test('the caption step sits at or above the caption floor', () {
+    expect(
+      TypeTokens.caption.fontSize,
+      greaterThanOrEqualTo(TypeTokens.captionFloor),
+    );
+  });
+
+  test('the caption step is the smallest step in the scale', () {
+    final double smallest = TypeTokens.all.values
+        .map((TextStyle s) => s.fontSize!)
+        .reduce((double a, double b) => a < b ? a : b);
+    expect(TypeTokens.caption.fontSize, smallest);
   });
 
   group('strut', () {
