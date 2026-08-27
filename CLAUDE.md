@@ -140,7 +140,7 @@ being asked.
 Do not build, scaffold, or "prepare for" any of these unless I say the milestone
 has changed:
 
-- backend, API client, auth, accounts, sync engine
+- backend, auth, accounts, sync engine
 - dispatcher web app, live tracking, WebSockets
 - OR-Tools, multi-vehicle VRP, time windows
 - geofencing, background location
@@ -150,6 +150,12 @@ has changed:
 The MVP is a single-user, no-account, offline app. Adding server-shaped
 abstractions "for later" is the failure mode to avoid. The invariants above are
 the only future-proofing required.
+
+**Network access.** No HTTP client of any kind before M4 — not `http`, not
+`dio`, not a bare `HttpClient`, not a "just for testing" fetch. At M4 exactly
+one arrives, and it is used only for the Mapbox Matrix API. Nothing else in the
+MVP reaches the network. Map tiles come through the Mapbox SDK, which is not
+yours to route through that client.
 
 ---
 
@@ -161,3 +167,23 @@ the only future-proofing required.
   is holding a parcel in one hand.
 - Minimum tap target 48dp. Test on a 2GB RAM device.
 - Dark and light themes, both real, neither an afterthought.
+
+### Navigation
+
+**Five bottom-nav destinations. Not six.** Past five, targets drop below 40dp,
+and this user is tapping one-handed while holding a parcel.
+
+| Destination | Holds |
+|---|---|
+| **Home** | Dashboard — batch progress, next stop, money, route summary |
+| **Orders** | Today's orders. Batch is the grouping and settlement unit *inside* Orders — a driver thinks "my orders today", not "my batch" |
+| **Route** | The optimized route. Present but empty-stated until a route exists |
+| **Money** | Settlement, expenses, remittance, cash on hand |
+| **More** | Plain list screen: Customers, Companies, History, Settings |
+
+- **Delivery is a modal flow**, launched from Route or Orders. Never a tab.
+- **Ingestion is an action (FAB), not a destination.**
+- `More` is a plain list, not a shell branch with its own stack.
+
+The twelve `features/` folders in `docs/ARCHITECTURE.md` §8.4 are a code layout,
+not a navigation design. Do not turn each one into a destination.

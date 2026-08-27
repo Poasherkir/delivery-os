@@ -15,10 +15,18 @@ analyzer:
     # TODO markers are a deliberate signal in this repo (see the bundled geo
     # dataset in M0-22). They must not fail the build under --fatal-infos.
     todo: ignore
+  # Generated sources. `flutter analyze --fatal-infos` runs with strict-casts,
+  # and machine-written code does not satisfy it — the moment M0-14 runs
+  # build_runner, thousands of lines of Drift and Riverpod output would fail the
+  # build and the tempting fix would be to weaken the lints. Exclude the
+  # generators' output instead, and keep the rules strict for hand-written code.
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - "**/*.drift.dart"
     - "**/*.mocks.dart"
+    - "**/generated_plugin_registrant.dart"
+    - "lib/core/l10n/generated/**"
 
 linter:
   rules:

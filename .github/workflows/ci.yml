@@ -1,0 +1,90 @@
+name: CI
+
+# Runs on every push and every pull request. There is no release job here:
+# signing and the Play track arrive in M5.
+on:
+  push:
+  pull_request:
+
+# A solo developer pushes often. Superseded runs are wasted minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.44.4"
+  # Matches the local development JDK. AGP 9 needs 17+, but keeping CI and the
+  # dev machine on the same major version means CI failures are real failures,
+  # not toolchain drift.
+  JAVA_VERSION: "21"
+
+jobs:
+  verify:
+    name: Format, analyze, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+
+      # --fatal-infos is deliberate. It is only tolerable because
+      # analysis_options.yaml excludes generated sources; without those
+      # exclusions the first build_runner output would force the lints to be
+      # weakened, which is how lint debt starts.
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      # The build above is the gate; this upload is a convenience. A debug APK
+      # is ~146 MB (fat, unshrunk, all ABIs), so uploading one per push would
+      # burn a free-tier artifact quota in a handful of commits. Default branch
+      # only, short retention.
+      - name: Upload debug APK
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
