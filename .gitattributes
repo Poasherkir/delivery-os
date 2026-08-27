@@ -1,0 +1,11 @@
+# Normalize line endings to LF in the repository and on checkout.
+# Without this, a Windows checkout stores CRLF and the CI format gate
+# (`dart format --set-exit-if-changed` on Linux) fails on every file.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jks binary
+*.keystore binary

@@ -1,0 +1,41 @@
+# Static analysis configuration for Delivery OS.
+#
+# CI runs `flutter analyze --fatal-infos`, so anything the analyzer reports —
+# infos included — fails the build. Keep the tree clean rather than silencing
+# rules with inline ignores.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # TODO markers are a deliberate signal in this repo (see the bundled geo
+    # dataset in M0-22). They must not fail the build under --fatal-infos.
+    todo: ignore
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - avoid_slow_async_io
+    - cancel_subscriptions
+    - close_sinks
+    - directives_ordering
+    - prefer_final_in_for_each
+    - prefer_final_locals
+    - prefer_single_quotes
+    - sort_pub_dependencies
+    - test_types_in_equals
+    - throw_in_finally
+    # Invariant 5: every mutation runs inside a transaction. A dropped future
+    # inside `db.transaction()` silently escapes it.
+    - unawaited_futures
+    - unnecessary_await_in_return
+    - unnecessary_parenthesis
