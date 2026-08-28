@@ -79,26 +79,59 @@ abstract final class TypeTokens {
 
   /// Prose scale, largest first. Used by the token gallery and the tests.
   static Map<String, TextStyle> get prose => <String, TextStyle>{
-    'display': display,
-    'headline': headline,
-    'title': title,
-    'subtitle': subtitle,
-    'body': body,
-    'bodySmall': bodySmall,
-    'label': label,
-    'caption': caption,
+    for (final AppTextStyle s in AppTextStyle.values)
+      if (!s.isMoney) s.name: s.style,
   };
 
   /// Money scale, largest first.
   static Map<String, TextStyle> get money => <String, TextStyle>{
-    'moneyLarge': moneyLarge,
-    'moneyMedium': moneyMedium,
-    'moneyBody': moneyBody,
-    'moneySmall': moneySmall,
+    for (final AppTextStyle s in AppTextStyle.values)
+      if (s.isMoney) s.name: s.style,
   };
 
   static Map<String, TextStyle> get all => <String, TextStyle>{
-    ...prose,
-    ...money,
+    for (final AppTextStyle s in AppTextStyle.values) s.name: s.style,
   };
+}
+
+/// The sanctioned text styles, in scale order.
+///
+/// This enum — not a bare [TextStyle] — is what `AppText` accepts, so a call
+/// site cannot invent a size, and every string is painted with the strut that
+/// keeps AR and FR line boxes identical.
+enum AppTextStyle {
+  display,
+  headline,
+  title,
+  subtitle,
+  body,
+  bodySmall,
+  label,
+  caption,
+  moneyLarge,
+  moneyMedium,
+  moneyBody,
+  moneySmall;
+
+  /// Whether this step belongs to the money ramp, which is read in columns
+  /// rather than in prose.
+  bool get isMoney => name.startsWith('money');
+
+  TextStyle get style => switch (this) {
+    AppTextStyle.display => TypeTokens.display,
+    AppTextStyle.headline => TypeTokens.headline,
+    AppTextStyle.title => TypeTokens.title,
+    AppTextStyle.subtitle => TypeTokens.subtitle,
+    AppTextStyle.body => TypeTokens.body,
+    AppTextStyle.bodySmall => TypeTokens.bodySmall,
+    AppTextStyle.label => TypeTokens.label,
+    AppTextStyle.caption => TypeTokens.caption,
+    AppTextStyle.moneyLarge => TypeTokens.moneyLarge,
+    AppTextStyle.moneyMedium => TypeTokens.moneyMedium,
+    AppTextStyle.moneyBody => TypeTokens.moneyBody,
+    AppTextStyle.moneySmall => TypeTokens.moneySmall,
+  };
+
+  /// The forced strut for this step. Never paint one without the other.
+  StrutStyle get strut => TypeTokens.strutFor(style);
 }
