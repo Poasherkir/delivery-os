@@ -186,19 +186,30 @@ void main() {
   });
 
   group('demote is the only way down', () {
+    test('reports what changed, and why', () {
+      final PinCorrection correction = GeoConfidence.gpsConfirmed.demote(
+        to: GeoConfidence.none,
+        reason: PinCorrectionReason.capturedAwayFromDeliveryPoint,
+      );
+
+      // Everything an audit_logs entry needs, without the caller having to
+      // assemble it.
+      expect(correction.previous, GeoConfidence.gpsConfirmed);
+      expect(correction.confidence, GeoConfidence.none);
+      expect(
+        correction.reason,
+        PinCorrectionReason.capturedAwayFromDeliveryPoint,
+      );
+    });
+
     test('lowers to the requested tier', () {
       expect(
-        GeoConfidence.gpsConfirmed.demote(
-          to: GeoConfidence.none,
-          reason: PinCorrectionReason.capturedAwayFromDeliveryPoint,
-        ),
-        GeoConfidence.none,
-      );
-      expect(
-        GeoConfidence.gpsConfirmed.demote(
-          to: GeoConfidence.communeCentroid,
-          reason: PinCorrectionReason.reportedIncorrect,
-        ),
+        GeoConfidence.gpsConfirmed
+            .demote(
+              to: GeoConfidence.communeCentroid,
+              reason: PinCorrectionReason.reportedIncorrect,
+            )
+            .confidence,
         GeoConfidence.communeCentroid,
       );
     });
@@ -246,13 +257,12 @@ void main() {
       for (final GeoConfidence from in GeoConfidence.values) {
         for (final GeoConfidence to in GeoConfidence.values) {
           if (to < from) {
-            expect(
-              from.demote(
-                to: to,
-                reason: PinCorrectionReason.reportedIncorrect,
-              ),
-              to,
+            final PinCorrection correction = from.demote(
+              to: to,
+              reason: PinCorrectionReason.reportedIncorrect,
             );
+            expect(correction.confidence, to);
+            expect(correction.previous, from);
           }
         }
       }
@@ -261,14 +271,48 @@ void main() {
     test('the error names the tier, never a coordinate', () {
       // Per the PII rule: nothing that reaches a log carries a location.
       try {
-        GeoConfidence.geocoded.demote(
+        // Assigned rather than discarded: demote is @useResult, so throwing
+        // the value away does not compile cleanly.
+        final PinCorrection unreachable = GeoConfidence.geocoded.demote(
           to: GeoConfidence.gpsConfirmed,
           reason: PinCorrectionReason.reportedIncorrect,
         );
-        fail('expected an ArgumentError');
+        fail('expected an ArgumentError, got $unreachable');
       } on ArgumentError catch (e) {
         expect(e.toString(), contains('geocoded'));
       }
+    });
+  });
+
+  group('PinCorrection', () {
+    PinCorrection correction() => GeoConfidence.gpsConfirmed.demote(
+      to: GeoConfidence.driverPinned,
+      reason: PinCorrectionReason.reportedIncorrect,
+    );
+
+    test('is equal by value', () {
+      expect(correction(), correction());
+      expect(correction().hashCode, correction().hashCode);
+      expect(
+        correction(),
+        isNot(
+          GeoConfidence.gpsConfirmed.demote(
+            to: GeoConfidence.none,
+            reason: PinCorrectionReason.reportedIncorrect,
+          ),
+        ),
+      );
+    });
+
+    test('always records a strict lowering', () {
+      expect(correction().confidence < correction().previous, isTrue);
+    });
+
+    test('toString carries tiers and a reason, never a coordinate', () {
+      expect(
+        correction().toString(),
+        'PinCorrection(gpsConfirmed -> driverPinned, reportedIncorrect)',
+      );
     });
   });
 

@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 /// Why a pin that was trusted is being taken back down.
 ///
 /// A value rather than a free string, so corrections are countable: "how often
@@ -107,14 +109,17 @@ enum GeoConfidence implements Comparable<GeoConfidence> {
   /// this exists for a user action or the M2 correction flow, never as a side
   /// effect of recording an observation.
   ///
-  /// **Callers write an `audit_logs` entry.** Losing a confidence-4 pin is a
-  /// material change to the geocoding asset and must be attributable. The
-  /// enum cannot enforce that; the repository must.
+  /// Returns a [PinCorrection] rather than a bare tier, and is [useResult], so
+  /// the audit trail is **enforced rather than documented**. A discarded
+  /// correction fails analysis; a `reason` parameter that the method never read
+  /// would only have been a comment with a type, and the first person tidying
+  /// up would delete it.
   ///
   /// Throws unless [to] is strictly lower — raising is [upgrade]'s job, and a
   /// no-op "demotion" almost certainly means the caller has the direction
   /// wrong.
-  GeoConfidence demote({
+  @useResult
+  PinCorrection demote({
     required GeoConfidence to,
     required PinCorrectionReason reason,
   }) {
@@ -126,7 +131,7 @@ enum GeoConfidence implements Comparable<GeoConfidence> {
             '(use upgrade to raise)',
       );
     }
-    return to;
+    return PinCorrection(previous: this, confidence: to, reason: reason);
   }
 
   bool operator <(GeoConfidence other) => tier < other.tier;
@@ -139,4 +144,42 @@ enum GeoConfidence implements Comparable<GeoConfidence> {
 
   @override
   int compareTo(GeoConfidence other) => tier.compareTo(other.tier);
+}
+
+/// A deliberate lowering of a pin's confidence.
+///
+/// Carries everything an `audit_logs` entry needs — what it was, what it became,
+/// and why — so recording the correction is a matter of persisting this value
+/// rather than remembering to assemble one.
+@immutable
+final class PinCorrection {
+  const PinCorrection({
+    required this.previous,
+    required this.confidence,
+    required this.reason,
+  });
+
+  /// The tier before the correction.
+  final GeoConfidence previous;
+
+  /// The tier after it. Always strictly lower than [previous].
+  final GeoConfidence confidence;
+
+  final PinCorrectionReason reason;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PinCorrection &&
+      other.previous == previous &&
+      other.confidence == confidence &&
+      other.reason == reason;
+
+  @override
+  int get hashCode => Object.hash(previous, confidence, reason);
+
+  /// Tiers and a reason only — no coordinate ever appears here, so this is safe
+  /// in a log.
+  @override
+  String toString() =>
+      'PinCorrection(${previous.name} -> ${confidence.name}, ${reason.name})';
 }
