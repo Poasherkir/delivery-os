@@ -119,6 +119,16 @@ final class Centimes implements Comparable<Centimes> {
   ///
   /// Ratios must be non-negative and sum to more than zero. A zero ratio
   /// receives nothing.
+  ///
+  /// **Order the ratios so the company's bucket is last.** Because the
+  /// remainder lands on later ratios, and a sub-dinar remainder has to land
+  /// somewhere, it should favour the driver. A driver who comes up short by
+  /// centimes notices and stops trusting the app; a company that gains
+  /// centimes never complains. This is a convention for callers — the rule
+  /// engine in M3 — not something this method can enforce.
+  ///
+  /// [maxValue] and [minValue] are bounds, never sentinels: nothing in this
+  /// codebase uses them to mean "unlimited" or "unset". Absence is `null`.
   List<Centimes> allocate(List<int> ratios) {
     if (ratios.isEmpty) {
       throw ArgumentError.value(ratios, 'ratios', 'must not be empty');
