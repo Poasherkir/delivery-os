@@ -1,0 +1,18 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "Delivery OS",
+  "@appTitle": {
+    "description": "Product name. Shown as the Android launcher label and the task-switcher title. A brand name, so it is not translated — the entry exists so the mechanism is in place and a future rename reaches both locales."
+  },
+
+  "settingsLanguage": "Langue",
+  "@settingsLanguage": {
+    "description": "Label for the language selector."
+  },
+
+  "languageSystem": "Automatique",
+  "@languageSystem": {
+    "description": "Language option meaning: follow the device setting. This is the default state, when the driver has never chosen explicitly."
+  }
+}

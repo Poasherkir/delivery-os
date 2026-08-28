@@ -39,6 +39,20 @@ abstract final class TypeTokens {
   /// Captions and metadata stop here, a step above the absolute floor.
   static const double captionFloor = 13;
 
+  /// Multiplier applied to every size when the active locale is Arabic.
+  ///
+  /// Arabic set at the same nominal size reads smaller than Latin, and this
+  /// app's primary audience reads Arabic in direct sunlight. **This is a hook,
+  /// not a measurement.** It is deliberately 1.0 — the value comes from
+  /// looking at a real device outdoors, not from a specimen on a monitor.
+  /// Changing this one number rescales the whole Arabic UI, strut included.
+  static const double arabicSizeMultiplier = 1.0;
+
+  /// The size multiplier for [locale]'s script. 1.0 for anything non-Arabic,
+  /// including a null locale (widget tests without a `Localizations` ancestor).
+  static double scriptMultiplierFor(Locale? locale) =>
+      locale?.languageCode == 'ar' ? arabicSizeMultiplier : 1.0;
+
   static TextStyle _style(double size, double height, FontWeight weight) =>
       TextStyle(
         fontFamily: family,

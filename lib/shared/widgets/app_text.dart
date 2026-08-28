@@ -55,11 +55,24 @@ class AppText extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorTokens tokens = context.colors;
 
+    // Arabic may need a size bump the Latin scale does not; the multiplier is
+    // 1.0 until measured on a device. Applied to the strut as well, so the
+    // line box grows with the glyphs instead of clipping them.
+    final double scale = TypeTokens.scriptMultiplierFor(
+      Localizations.maybeLocaleOf(context),
+    );
+    final TextStyle style = scale == 1
+        ? appStyle.style
+        : appStyle.style.copyWith(fontSize: appStyle.style.fontSize! * scale);
+    final StrutStyle strut = scale == 1
+        ? appStyle.strut
+        : TypeTokens.strutFor(style);
+
     // The one place a raw Text is allowed. See the guard test.
     return Text(
       data,
-      style: appStyle.style.copyWith(color: color ?? tokens.textPrimary),
-      strutStyle: appStyle.strut,
+      style: style.copyWith(color: color ?? tokens.textPrimary),
+      strutStyle: strut,
       textAlign: textAlign,
       maxLines: maxLines,
       overflow: overflow,

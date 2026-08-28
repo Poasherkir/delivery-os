@@ -1,0 +1,9 @@
+# Generated into lib/ rather than a synthetic package, so the output is
+# readable, committed, and excluded from analysis + the format gate by path
+# (see analysis_options.yaml and .github/workflows/ci.yml).
+arb-dir: lib/core/l10n
+template-arb-file: app_fr.arb
+output-dir: lib/core/l10n/generated
+output-localization-file: app_l10n.dart
+output-class: AppL10n
+nullable-getter: false

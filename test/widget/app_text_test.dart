@@ -1,3 +1,5 @@
+import 'package:delivery_os/core/l10n/app_locales.dart';
+import 'package:delivery_os/core/l10n/generated/app_l10n.dart';
 import 'package:delivery_os/core/theme/app_theme.dart';
 import 'package:delivery_os/core/theme/tokens/tokens.dart';
 import 'package:delivery_os/shared/widgets/app_text.dart';
@@ -88,39 +90,95 @@ void main() {
     expect(rendered.style?.color, ColorTokens.light.moneyEarningFg);
   });
 
-  testWidgets('AR and FR occupy the same height at every style', (
+  testWidgets('AR and FR line boxes stay in the ratio the multiplier sets', (
     WidgetTester tester,
   ) async {
+    // With the Arabic multiplier at 1.0 this asserts they are identical.
+    // Written as a ratio rather than as equality so that raising the
+    // multiplier after a device check is a deliberate change, not a red test.
     for (final AppTextStyle style in AppTextStyle.values) {
-      final List<double> heights = <double>[];
-
-      for (final (TextDirection direction, String text)
-          in <(TextDirection, String)>[
-            (TextDirection.ltr, 'Livraison a Bab Ezzouar'),
-            (TextDirection.rtl, 'توصيل إلى باب الزوار'),
-          ]) {
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.light(),
-            home: Directionality(
-              textDirection: direction,
-              child: Scaffold(
-                body: Align(
-                  alignment: Alignment.topLeft,
-                  child: AppText(text, style),
-                ),
-              ),
-            ),
-          ),
-        );
-        heights.add(tester.getSize(find.byType(Text)).height);
-      }
+      final double fr = await _heightIn(
+        tester,
+        AppLocales.french,
+        'Livraison a Bab Ezzouar',
+        style,
+      );
+      final double ar = await _heightIn(
+        tester,
+        AppLocales.arabic,
+        'توصيل إلى باب الزوار',
+        style,
+      );
 
       expect(
-        heights[1],
-        closeTo(heights[0], 0.01),
-        reason: '${style.name} renders taller in AR than in FR',
+        ar,
+        closeTo(fr * TypeTokens.arabicSizeMultiplier, 1.0),
+        reason: '${style.name} is out of ratio between AR and FR',
       );
     }
   });
+
+  testWidgets('the Arabic script multiplier reaches size and strut alike', (
+    WidgetTester tester,
+  ) async {
+    for (final AppTextStyle style in AppTextStyle.values) {
+      await _pumpLocalized(
+        tester,
+        AppLocales.arabic,
+        AppText('باب الزوار', style),
+      );
+      final Text rendered = tester.widget<Text>(find.byType(Text));
+
+      final double expected =
+          style.style.fontSize! * TypeTokens.arabicSizeMultiplier;
+
+      expect(rendered.style?.fontSize, closeTo(expected, 0.001));
+      // The strut must scale with it, or taller glyphs clip against a line box
+      // sized for the unscaled text.
+      expect(rendered.strutStyle?.fontSize, closeTo(expected, 0.001));
+      expect(rendered.strutStyle?.forceStrutHeight, isTrue);
+    }
+  });
+
+  testWidgets('French is never rescaled', (WidgetTester tester) async {
+    await _pumpLocalized(
+      tester,
+      AppLocales.french,
+      const AppText('Bab Ezzouar', AppTextStyle.body),
+    );
+
+    expect(
+      tester.widget<Text>(find.byType(Text)).style?.fontSize,
+      TypeTokens.body.fontSize,
+    );
+  });
+}
+
+Future<void> _pumpLocalized(
+  WidgetTester tester,
+  Locale locale,
+  Widget child,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: locale,
+      supportedLocales: AppLocales.supported,
+      localizationsDelegates: AppL10n.localizationsDelegates,
+      theme: AppTheme.light(),
+      home: Scaffold(
+        body: Align(alignment: AlignmentDirectional.topStart, child: child),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<double> _heightIn(
+  WidgetTester tester,
+  Locale locale,
+  String text,
+  AppTextStyle style,
+) async {
+  await _pumpLocalized(tester, locale, AppText(text, style));
+  return tester.getSize(find.byType(Text)).height;
 }

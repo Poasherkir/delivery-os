@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The Android launcher label. A resource rather than a literal in the
+      manifest, so it is never a hardcoded user-facing string (invariant 10).
+
+      There is deliberately no values-ar/ or values-fr/ override: the product
+      name is a brand and reads identically in both languages. Add one the day
+      that stops being true — three byte-identical files today would be cargo
+      cult, not localization.
+    -->
+    <string name="app_name">Delivery OS</string>
+</resources>
