@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/_dev/presentation/token_gallery_screen.dart';
 import '../features/companies/presentation/companies_screen.dart';
 import '../features/customers/presentation/customers_screen.dart';
 import '../features/history/presentation/history_screen.dart';
@@ -50,6 +52,15 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
           path: entry.path,
           builder: (BuildContext context, GoRouterState state) =>
               _moreScreen(entry),
+        ),
+
+      // Debug only. kDebugMode is a compile-time constant, so the route and
+      // the screen behind it are tree-shaken out of a release build.
+      if (kDebugMode)
+        GoRoute(
+          path: TokenGalleryScreen.path,
+          builder: (BuildContext context, GoRouterState state) =>
+              const TokenGalleryScreen(),
         ),
     ],
   );

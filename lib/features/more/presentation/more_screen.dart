@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,6 +7,7 @@ import '../../../core/l10n/generated/app_l10n.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/tokens/tokens.dart';
 import '../../../shared/widgets/app_text.dart';
+import '../../_dev/presentation/token_gallery_screen.dart';
 
 /// The More destination: a plain list, deliberately.
 ///
@@ -20,12 +22,31 @@ class MoreScreen extends StatelessWidget {
     final AppL10n l10n = AppL10n.of(context);
     final ColorTokens colors = context.colors;
 
+    // The gallery is appended in debug builds only. kDebugMode is a
+    // compile-time constant, so this collapses away in release.
+    final int itemCount = MoreEntry.values.length + (kDebugMode ? 1 : 0);
+
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: SpaceTokens.space8),
-      itemCount: MoreEntry.values.length,
+      itemCount: itemCount,
       separatorBuilder: (BuildContext context, int index) =>
           Divider(height: 1, color: colors.border),
       itemBuilder: (BuildContext context, int index) {
+        if (index == MoreEntry.values.length) {
+          return ListTile(
+            key: const Key('more.devGallery'),
+            leading: Icon(Icons.palette_outlined, color: colors.textSecondary),
+            title: const AppText('Design tokens', AppTextStyle.body),
+            subtitle: AppText(
+              'Debug build only',
+              AppTextStyle.caption,
+              color: colors.textSecondary,
+            ),
+            trailing: Icon(Icons.chevron_right, color: colors.textDisabled),
+            onTap: () => context.push(TokenGalleryScreen.path),
+          );
+        }
+
         final MoreEntry entry = MoreEntry.values[index];
 
         return ListTile(

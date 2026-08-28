@@ -14,6 +14,7 @@ import 'package:delivery_os/features/orders/presentation/orders_screen.dart';
 import 'package:delivery_os/features/route/presentation/route_screen.dart';
 import 'package:delivery_os/features/settings/presentation/settings_screen.dart';
 import 'package:delivery_os/shared/widgets/app_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -142,12 +143,20 @@ void main() {
   }
 
   group('More', () {
-    testWidgets('lists exactly its four entries', (WidgetTester tester) async {
+    testWidgets('lists its four entries, plus the debug gallery', (
+      WidgetTester tester,
+    ) async {
       await _pumpApp(tester);
-      await tester.tap(find.byIcon(AppDestination.more.icon));
-      await tester.pumpAndSettle();
+      await _openMore(tester);
 
-      expect(find.byType(ListTile), findsNWidgets(MoreEntry.values.length));
+      // The token gallery is appended in debug builds only, and tests run in
+      // debug. Stated as a sum rather than a magic 5, so the release-build
+      // shape stays visible in the assertion.
+      expect(
+        find.byType(ListTile),
+        findsNWidgets(MoreEntry.values.length + (kDebugMode ? 1 : 0)),
+      );
+      expect(find.byKey(const Key('more.devGallery')), findsOneWidget);
     });
 
     // One test per entry rather than a loop: re-pumping DeliveryOsApp inside a

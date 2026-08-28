@@ -1,5 +1,4 @@
 import 'package:flutter/animation.dart';
-import 'package:flutter/foundation.dart';
 
 /// Motion tokens. Short, functional, never decorative.
 ///
@@ -22,6 +21,9 @@ abstract final class MotionTokens {
   static const Curve entering = Curves.easeOut;
   static const Curve exiting = Curves.easeIn;
 
-  @visibleForTesting
+  /// Every one of the durations, in order.
+  ///
+  /// Not test-only: the debug token gallery enumerates these, and a
+  /// gallery that lists tokens by hand drifts from the ones that exist.
   static const List<Duration> scale = <Duration>[instant, fast, base, slow];
 }

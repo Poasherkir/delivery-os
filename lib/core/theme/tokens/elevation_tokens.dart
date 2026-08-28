@@ -81,7 +81,10 @@ abstract final class ElevationTokens {
   /// slightly stronger shadow" cannot drift in one commit at a time.
   static const double maxOpacity = 0.10;
 
-  @visibleForTesting
+  /// Every one of the elevation levels, in order.
+  ///
+  /// Not test-only: the debug token gallery enumerates these, and a
+  /// gallery that lists tokens by hand drifts from the ones that exist.
   static const List<ElevationToken> scale = <ElevationToken>[
     flat,
     resting,

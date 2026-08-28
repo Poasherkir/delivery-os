@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Corner radii. Small throughout — logistics software, not a consumer toy.
 abstract final class RadiusTokens {
   static const double none = 0;
@@ -16,6 +14,9 @@ abstract final class RadiusTokens {
   /// Fully rounded — status pills only.
   static const double pill = 999;
 
-  @visibleForTesting
+  /// Every one of the radii, in order.
+  ///
+  /// Not test-only: the debug token gallery enumerates these, and a
+  /// gallery that lists tokens by hand drifts from the ones that exist.
   static const List<double> scale = <double>[none, small, medium, large, pill];
 }

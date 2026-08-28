@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Spacing and sizing tokens, on a 4pt grid with a 2pt hairline step.
 ///
 /// The scale is deliberately dense at the small end: this is a
@@ -28,7 +26,10 @@ abstract final class SpaceTokens {
   /// it is never smaller than this.
   static const double primaryActionHeight = 56;
 
-  @visibleForTesting
+  /// Every one of the spacing steps, in order.
+  ///
+  /// Not test-only: the debug token gallery enumerates these, and a
+  /// gallery that lists tokens by hand drifts from the ones that exist.
   static const List<double> scale = <double>[
     none,
     space2,
