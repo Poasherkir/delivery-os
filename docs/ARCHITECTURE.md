@@ -1064,6 +1064,34 @@ deliveries from it is how the asset gets poisoned. So:
 The column has to exist before M2 can make that decision, which is why it is in
 the schema from v1.
 
+**Promotion ladder.** A captured fix reaches confidence 4 only by clearing three
+gates, each catching something the one before it cannot:
+
+1. **Inside the Algeria rectangle.** Catches a transposed latitude and
+   longitude, a zeroed fix, a European address. `GeoPoint.isPlausiblyAlgerian`.
+   Weak by construction — the rectangle also contains Casablanca and Tunis.
+2. **Inside or near the order's declared commune.** Catches a *real* GPS fix
+   taken in the wrong place, which gate 1 cannot see at all. This is the sharp
+   one: a driver two streets away is still comfortably inside the country.
+3. **`accuracy_m` under threshold.** Catches an indoor fix with a 300-metre
+   radius, which can be in the right commune and still useless.
+
+All three thresholds are M2 decisions, set against real fixes in Algiers.
+
+**Gate 2 constrains the geography dataset, and that decision lands earlier.**
+Point-in-polygon against the commune boundary is the correct test; a fixed
+radius from a centroid is not. An Algiers commune is a few square kilometres and
+a Saharan one can be thousands, so no single radius serves both, and the
+centroid of a large desert commune can be tens of kilometres from every address
+in it.
+
+So prefer a commune dataset carrying **boundary polygons**, not just names and
+centroids. If only centroids are available, gate 2 degrades to a wilaya-scaled
+radius — weaker, but weakest in the sparse southern wilayas where it matters
+least. The M0 loader treats a boundary field as **optional**: present, it is
+stored; absent, the dataset still loads and the gate degrades. Nothing in M0
+blocks on it.
+
 `GeoPoint` in `domain/` stays pure latitude and longitude. Accuracy is a property
 of a *measurement*, not of a coordinate, and putting it on the value object would
 contaminate every use site — route stops, commune centroids and map taps have no
