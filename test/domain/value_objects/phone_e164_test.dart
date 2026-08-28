@@ -71,6 +71,22 @@ void main() {
     test('bare national number, trunk zero omitted', () {
       _parsesTo('550123456', _canonical);
     });
+
+    test('a redundant trunk zero behind an international marker', () {
+      // The "+213 (0) 550 123 456" form on business cards and websites.
+      // Deterministic to strip: no Algerian national number begins with 0.
+      _parsesTo('+213 (0) 550 123 456', _canonical);
+      _parsesTo('+2130550123456', _canonical);
+      _parsesTo('00213 (0) 550 123 456', _canonical);
+      _parsesTo('002130550123456', _canonical);
+    });
+
+    test('but not without one — bare 213 stays strict', () {
+      // No `+` and no `00`, so nothing marks this as an international form and
+      // the extra tolerance is not licensed. Keeping this branch tight also
+      // keeps a 13-digit tracking number from parsing as a phone.
+      _rejects('2130550123456');
+    });
   });
 
   group('separators are noise', () {
@@ -193,14 +209,6 @@ void main() {
       _rejects('0213456789');
       _rejects('0213550123456');
       _rejects('0 213 55 01 23 456');
-    });
-
-    test('a redundant trunk zero after the country code', () {
-      // The European "+213 (0) 550..." convention. Rejected because it makes
-      // the digit count ambiguous, and Algerian senders do not write it.
-      // Reverse this if a real manifest turns one up.
-      _rejects('+213 (0) 550 123 456');
-      _rejects('+2130550123456');
     });
 
     test('foreign numbers', () {

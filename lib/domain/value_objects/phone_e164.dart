@@ -153,16 +153,25 @@ final class PhoneE164 implements Comparable<PhoneE164> {
       if (!digits.startsWith(countryCode)) {
         return null;
       }
-      return _exactly(digits.substring(countryCode.length));
+      return _afterCountryCode(digits.substring(countryCode.length));
     }
 
     if (digits.startsWith('00$countryCode')) {
-      return _exactly(digits.substring(2 + countryCode.length));
+      return _afterCountryCode(digits.substring(2 + countryCode.length));
     }
 
-    // `0213…` is genuinely ambiguous: a trunk zero followed by the country
-    // code, or a landline whose national number starts 213. Rejected rather
-    // than guessed at, because guessing wrong writes a wrong identity key.
+    // `0213…` is rejected while `+213 (0)…` is accepted, and the two rules are
+    // not in tension — the difference is whether an international marker is
+    // present.
+    //
+    // With a leading `+` or `00`, everything after the country code is by
+    // definition a national number, so a leading zero there can only be a
+    // redundant trunk zero: see [_afterCountryCode].
+    //
+    // With neither marker, `0213…` has two readings — a trunk zero followed by
+    // an area code beginning 213, or a mangled `00213` — and nothing in the
+    // string distinguishes them. Guessing wrong writes a wrong identity key,
+    // so neither reading is chosen.
     if (digits.startsWith('0$countryCode')) {
       return null;
     }
@@ -179,6 +188,22 @@ final class PhoneE164 implements Comparable<PhoneE164> {
 
     // Bare national number, for a driver who omits the trunk zero.
     return _exactly(digits);
+  }
+
+  /// Interprets the digits following an explicit country code.
+  ///
+  /// Accepts a redundant trunk zero — the `+213 (0) 550 123 456` form found on
+  /// business cards and websites. Deterministic rather than a guess: no
+  /// Algerian national number begins with `0`, so ten digits beginning with
+  /// one can only be a trunk zero.
+  ///
+  /// Only reachable behind `+` or `00`. Without an international marker the
+  /// same shape is ambiguous, which is why bare `0213…` is rejected.
+  static String? _afterCountryCode(String rest) {
+    if (rest.length == 1 + nationalLength && rest.startsWith('0')) {
+      return rest.substring(1);
+    }
+    return _exactly(rest);
   }
 
   static String? _exactly(String digits) =>
