@@ -96,11 +96,17 @@ class _TokenGalleryScreenState extends ConsumerState<TokenGalleryScreen> {
             child: SegmentedButton<String>(
               showSelectedIcon: false,
               segments: <ButtonSegment<String>>[
-                const ButtonSegment<String>(value: '', label: Text('System')),
+                const ButtonSegment<String>(
+                  value: '',
+                  label: AppText('System', AppTextStyle.label),
+                ),
                 for (final Locale option in AppLocales.supported)
                   ButtonSegment<String>(
                     value: option.languageCode,
-                    label: Text(option.languageCode.toUpperCase()),
+                    label: AppText(
+                      option.languageCode.toUpperCase(),
+                      AppTextStyle.label,
+                    ),
                   ),
               ],
               selected: <String>{locale?.languageCode ?? ''},
@@ -119,9 +125,18 @@ class _TokenGalleryScreenState extends ConsumerState<TokenGalleryScreen> {
             child: SegmentedButton<String>(
               showSelectedIcon: false,
               segments: const <ButtonSegment<String>>[
-                ButtonSegment<String>(value: '', label: Text('System')),
-                ButtonSegment<String>(value: 'light', label: Text('Light')),
-                ButtonSegment<String>(value: 'dark', label: Text('Dark')),
+                ButtonSegment<String>(
+                  value: '',
+                  label: AppText('System', AppTextStyle.label),
+                ),
+                ButtonSegment<String>(
+                  value: 'light',
+                  label: AppText('Light', AppTextStyle.label),
+                ),
+                ButtonSegment<String>(
+                  value: 'dark',
+                  label: AppText('Dark', AppTextStyle.label),
+                ),
               ],
               selected: <String>{
                 switch (_brightnessOverride) {
@@ -146,7 +161,10 @@ class _TokenGalleryScreenState extends ConsumerState<TokenGalleryScreen> {
               showSelectedIcon: false,
               segments: <ButtonSegment<double>>[
                 for (final double scale in _scales)
-                  ButtonSegment<double>(value: scale, label: Text('${scale}x')),
+                  ButtonSegment<double>(
+                    value: scale,
+                    label: AppText('${scale}x', AppTextStyle.label),
+                  ),
               ],
               selected: <double>{_textScale},
               onSelectionChanged: (Set<double> selection) =>

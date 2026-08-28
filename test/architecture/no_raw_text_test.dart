@@ -6,12 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// `lib/app` is included because the shell renders the navigation labels.
 const List<String> _scanned = <String>['lib/app', 'lib/features', 'lib/shared'];
 
-/// The one implementation allowed to construct a raw [Text], plus the throwaway
-/// token gallery, which deliberately renders unstyled specimens.
-const List<String> _allowed = <String>[
-  'lib/shared/widgets/app_text.dart',
-  'lib/features/_dev/',
-];
+/// The single allowed implementation — and it is structural, not a
+/// convenience: [AppText] has to build a [Text] eventually.
+///
+/// There is deliberately nothing else here. Every allowance in a mechanical
+/// guard is a hole that gets widened later, so the rule is absolute rather than
+/// conditional. The debug token gallery was the second entry and no longer
+/// needs one; its ButtonSegment labels are AppText too.
+const List<String> _allowed = <String>['lib/shared/widgets/app_text.dart'];
 
 /// Matches `Text(` and `Text.rich(` but not `AppText(`, `RichText(`,
 /// `SelectableText(`, `TextButton(`, `TextField(`, `TextStyle(` or `TextSpan(`.
@@ -102,8 +104,9 @@ void main() {
     }
   });
 
-  test('the allow list stays small', () {
-    // Every entry here is a hole in the guarantee.
-    expect(_allowed, hasLength(2));
+  test('there is exactly one allowance, and it is structural', () {
+    // AppText must build a Text; nothing else may. If this number ever grows,
+    // the guarantee has become conditional.
+    expect(_allowed, <String>['lib/shared/widgets/app_text.dart']);
   });
 }
