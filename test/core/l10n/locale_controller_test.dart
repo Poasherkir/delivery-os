@@ -1,5 +1,6 @@
 import 'dart:ui' show Locale;
 
+import 'package:delivery_os/app/di.dart';
 import 'package:delivery_os/core/l10n/app_locales.dart';
 import 'package:delivery_os/core/l10n/locale_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

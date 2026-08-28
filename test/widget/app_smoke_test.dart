@@ -1,5 +1,5 @@
-import 'package:delivery_os/core/l10n/locale_controller.dart';
-import 'package:delivery_os/main.dart';
+import 'package:delivery_os/app/app.dart';
+import 'package:delivery_os/app/di.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -114,6 +114,60 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Automatique'**
   String get languageSystem;
+
+  /// Bottom-nav destination and screen title: the daily dashboard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accueil'**
+  String get navHome;
+
+  /// Bottom-nav destination and screen title: today's orders. The batch is a grouping inside this screen, not its own destination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commandes'**
+  String get navOrders;
+
+  /// Bottom-nav destination and screen title: the optimized route.
+  ///
+  /// In fr, this message translates to:
+  /// **'Itinéraire'**
+  String get navRoute;
+
+  /// Bottom-nav destination and screen title: settlement, expenses, remittance, cash on hand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Finances'**
+  String get navMoney;
+
+  /// Bottom-nav destination and screen title: a plain list linking to the screens that do not earn a tab.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus'**
+  String get navMore;
+
+  /// Screen title, reached from More: the customer database.
+  ///
+  /// In fr, this message translates to:
+  /// **'Clients'**
+  String get navCustomers;
+
+  /// Screen title, reached from More: the delivery companies the driver works for.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sociétés'**
+  String get navCompanies;
+
+  /// Screen title, reached from More: past days, drilled down by date.
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique'**
+  String get navHistory;
+
+  /// Screen title, reached from More: app settings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paramètres'**
+  String get navSettings;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -16,4 +16,31 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get languageSystem => 'Automatique';
+
+  @override
+  String get navHome => 'Accueil';
+
+  @override
+  String get navOrders => 'Commandes';
+
+  @override
+  String get navRoute => 'Itinéraire';
+
+  @override
+  String get navMoney => 'Finances';
+
+  @override
+  String get navMore => 'Plus';
+
+  @override
+  String get navCustomers => 'Clients';
+
+  @override
+  String get navCompanies => 'Sociétés';
+
+  @override
+  String get navHistory => 'Historique';
+
+  @override
+  String get navSettings => 'Paramètres';
 }

@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/tokens/tokens.dart';
 
+// AppText is unusable without AppTextStyle, so callers get both from one
+// import rather than having to know which token file the enum lives in.
+export '../../core/theme/tokens/type_tokens.dart' show AppTextStyle;
+
 /// The only sanctioned way to render text in this app.
 ///
 /// Two things it guarantees that a bare [Text] does not:

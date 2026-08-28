@@ -1,7 +1,15 @@
 {
   "@@locale": "ar",
-
   "appTitle": "Delivery OS",
   "settingsLanguage": "اللغة",
-  "languageSystem": "تلقائي"
+  "languageSystem": "تلقائي",
+  "navHome": "الرئيسية",
+  "navOrders": "الطلبات",
+  "navRoute": "المسار",
+  "navMoney": "المالية",
+  "navMore": "المزيد",
+  "navCustomers": "الزبائن",
+  "navCompanies": "الشركات",
+  "navHistory": "السجل",
+  "navSettings": "الإعدادات"
 }

@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Directories where text is rendered and the guarantee must hold.
-const List<String> _scanned = <String>['lib/features', 'lib/shared'];
+/// `lib/app` is included because the shell renders the navigation labels.
+const List<String> _scanned = <String>['lib/app', 'lib/features', 'lib/shared'];
 
 /// The one implementation allowed to construct a raw [Text], plus the throwaway
 /// token gallery, which deliberately renders unstyled specimens.

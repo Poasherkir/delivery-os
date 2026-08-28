@@ -3,16 +3,8 @@ import 'dart:ui' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app/di.dart';
 import 'app_locales.dart';
-
-/// Overridden in `main()` with an instance loaded before the first frame, so
-/// the app never renders one frame in the wrong language and then swaps.
-final Provider<SharedPreferences> sharedPreferencesProvider =
-    Provider<SharedPreferences>(
-      (Ref ref) => throw StateError(
-        'sharedPreferencesProvider must be overridden in ProviderScope',
-      ),
-    );
 
 /// The driver's explicit language choice, or `null` for "follow the device".
 ///
