@@ -456,6 +456,7 @@ CREATE TABLE customer_addresses (
   commune_id     INT NOT NULL REFERENCES communes(id),
   detail         TEXT,                       -- free text: cité, bloc, étage
   geo            GEOGRAPHY(POINT,4326),
+  accuracy_m     INT,                        -- radius reported with the fix
   geo_confidence SMALLINT NOT NULL DEFAULT 0,
   -- 0 = none, 1 = commune centroid, 2 = geocoded string,
   -- 3 = driver-pinned on map, 4 = GPS-confirmed at delivery
@@ -530,6 +531,7 @@ CREATE TABLE delivery_attempts (
                                 -- absent|rescheduled|postponed|returned
   outcome_note TEXT,
   geo          GEOGRAPHY(POINT,4326),
+  accuracy_m   INT,             -- radius reported with the fix; see §10.5
   occurred_at  TIMESTAMPTZ NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1039,6 +1041,36 @@ Mapbox's traffic-aware profile caps at 10 coordinates, so you cannot get a traff
 
 ---
 
+### 10.5 Pin accuracy, and not poisoning the learned-pin database
+
+`customer_addresses.accuracy_m` and `delivery_attempts.accuracy_m` hold the
+radius the platform reports alongside a GPS fix.
+
+The learned-pin geocoder (§1.3, §20.1) is the single most valuable asset this
+product builds, and it compounds: every delivery improves it. That also means
+every bad pin written into it degrades every future route through that
+neighbourhood, and nothing in the app will ever tell you it happened.
+
+A fix taken indoors, in a stairwell, or in a dense-block courtyard can come back
+with a 300-metre radius. Promoting that to confidence 4 and routing future
+deliveries from it is how the asset gets poisoned. So:
+
+- capture `accuracy_m` with every fix, at the moment of capture — it is not
+  recoverable later
+- a fix worse than the threshold is stored but **not** promoted to confidence 4
+- the threshold is an M2 decision, set after looking at real fixes in Algiers,
+  not guessed at now
+
+The column has to exist before M2 can make that decision, which is why it is in
+the schema from v1.
+
+`GeoPoint` in `domain/` stays pure latitude and longitude. Accuracy is a property
+of a *measurement*, not of a coordinate, and putting it on the value object would
+contaminate every use site — route stops, commune centroids and map taps have no
+accuracy radius.
+
+---
+
 ## 11. Offline synchronization strategy
 
 ### 11.1 Model
@@ -1386,6 +1418,29 @@ Ranked by how much they differentiate against everything else in this market.
 15. Customer profile: addresses, history, call and WhatsApp actions.
 16. Commune picker with search.
 17. **Gate:** stopwatch test of 15 orders. Fix until it is under 4 minutes.
+
+**Two things settled in M0 that constrain this milestone.**
+
+**A phone that fails to parse must not block order creation.** A driver standing
+in an agency at 07:00 cannot be stopped from entering an order because our
+validator disagrees with reality. The entry flow offers *save and fix later*:
+the raw string is retained verbatim, the order is created, and the customer
+record is flagged for correction. `PhoneE164` is the identity key when it
+parses — it is not a gate on the driver's morning.
+
+This matters most for landlines. `PhoneE164.nationalLength` assumes nine
+significant digits for both mobiles and landlines; Algeria closed its numbering
+plan in 2008 and older landline formats were shorter. Verify against a real
+manifest before hardening ingestion, and until then let unparseable numbers
+through rather than rejecting a real customer.
+
+**"Parses as a phone" is not a classifier.** `PhoneE164` accepts a bare
+nine-digit national number, so a nine-digit tracking number beginning with 5, 6
+or 7 parses cleanly as a mobile. The paste and OCR parsers (V1.5) must classify
+by field position, column header and surrounding context — never by asking the
+value object whether a token happens to be valid. The value object answers "is
+this a well-formed Algerian number", which is a different question from "is this
+field a phone number".
 
 ### Week 3–5 (M2)
 
