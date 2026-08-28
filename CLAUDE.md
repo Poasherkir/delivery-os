@@ -91,6 +91,25 @@ State management is **Riverpod**. Navigation is **go_router**. Local DB is
 
 ---
 
+## PII in diagnostics
+
+**No value object's `toString()`, and no exception message, ever contains full
+PII.** Anything that can reach a log line or a crash payload is masked at the
+source, not scrubbed downstream — a scrubber only catches what it was told to
+look for.
+
+- Phone numbers are masked: country code and last three digits.
+- Coordinates are rounded to at most two decimal places.
+- The raw input is never quoted back in a parse failure.
+
+A customer's phone number and their home coordinates are the most sensitive data
+in this system (`docs/ARCHITECTURE.md` §13). A leaked database is a list of
+Algerian households, their addresses, and when they receive valuable
+cash-on-delivery parcels. The full value stays available on a named accessor
+(`e164`, `latitude`) for the code that legitimately needs it.
+
+---
+
 ## Commands
 
 ```bash
@@ -124,6 +143,11 @@ being asked.
   (`flutter analyze`, `flutter test`, `dart format --set-exit-if-changed`,
   `flutter build`) run bare, with their full output shown. If a pipe is
   genuinely unavoidable, `set -o pipefail` first and echo the real exit code.
+- **Control and invisible characters are built from codepoints, never pasted.**
+  Bidi marks, zero-width characters, BOMs and the like are invisible in an
+  editor, unreviewable in a diff, and silently mangled by a copy-paste. Write
+  `String.fromCharCode(0x200E)`, not the character. Prose in comments is exempt;
+  string literals are not.
 - **Amend freely while unpushed, never after.** A commit that fails its own CI
   gate must not sit permanently in history, so fix it by amending while the
   branch is still local. Once a commit is on the remote it is immutable: fix
