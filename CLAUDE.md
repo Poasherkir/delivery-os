@@ -142,6 +142,12 @@ being asked.
   - optimizer output is always a permutation containing every input stop exactly
     once
 - DAO tests run against in-memory SQLite (`drift/native`).
+- **Any widget test whose behaviour depends on locale sets the locale
+  explicitly.** No test relies on the ambient device locale. The Flutter test
+  runner reports `en-US`, which correctly falls back to Arabic — so a test that
+  never names a locale is exercising AR while reading as though it were LTR,
+  passes for the wrong reason, and flips the day the runner changes. This was
+  caught in M0-07 by an RTL test that was comparing RTL against RTL.
 
 ---
 
