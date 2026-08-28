@@ -141,6 +141,16 @@ being asked.
   - no rule spec ever produces a negative commission
   - optimizer output is always a permutation containing every input stop exactly
     once
+- **Expected values in money tests are derived independently of the
+  implementation, and the derivation is stated in a comment.** Cite the
+  arithmetic — a closed form, a hand computation, a known reference — so the
+  number can be checked on paper without rerunning the code. A test whose
+  expected value came from the same reasoning that wrote the implementation is
+  not verification: both can be wrong together and agree. Twice in M0 a
+  money-adjacent test was wrong before the implementation was. The model is the
+  half-even bias test in `centimes_test.dart`: "the first 100 odd numbers sum
+  to 100², so the exact half is 5000." M3's settlement tests are held to this
+  hardest.
 - DAO tests run against in-memory SQLite (`drift/native`).
 - **Any widget test whose behaviour depends on locale sets the locale
   explicitly.** No test relies on the ambient device locale. The Flutter test
