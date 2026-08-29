@@ -1,5 +1,7 @@
 import 'package:delivery_os/data/db/conventions/audit_columns.dart';
 import 'package:delivery_os/data/db/conventions/converters.dart';
+import 'package:delivery_os/data/db/conventions/owner_columns.dart';
+import 'package:delivery_os/data/db/tables/users.dart';
 import 'package:delivery_os/domain/value_objects/centimes.dart';
 import 'package:delivery_os/domain/value_objects/geo_confidence.dart';
 import 'package:delivery_os/domain/value_objects/phone_e164.dart';
@@ -45,8 +47,11 @@ class UserThings extends Table with UuidPrimaryKey, UserColumns {
   TextColumn get displayName => text()();
 }
 
+// Users is present because the owner foreign key now lives on the mixin, so
+// every owned table references it. That is the point: no owned table can be
+// defined without an owner.
 @DriftDatabase(
-  tables: <Type>[OwnedThings, AppendOnlyThings, StopThings, UserThings],
+  tables: <Type>[Users, OwnedThings, AppendOnlyThings, StopThings, UserThings],
 )
 class ConventionsFixtureDb extends _$ConventionsFixtureDb {
   ConventionsFixtureDb(super.executor);
