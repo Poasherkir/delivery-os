@@ -6,7 +6,21 @@ version: 1.0.0+1
 environment:
   sdk: ^3.12.2
 
+# package:sqlite3 3.x bundles its own SQLite through Dart hooks — on every
+# platform including the test host, so there is no separate plugin and no
+# sqlite3.dll to find on Windows. sqlcipher_flutter_libs is obsolete and its
+# 0.7.0 release is an empty package.
+#
+# The encryption-capable build is selected from the start so the binary never
+# changes underneath us: M0-19 only adds `PRAGMA key`, it does not swap the
+# engine. See ARCHITECTURE.md §13.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
+
 dependencies:
+  drift: ^2.34.3
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -16,9 +30,12 @@ dependencies:
   intl: ^0.20.2
   meta: ^1.18.0
   shared_preferences: ^2.5.5
+  sqlite3: ^3.5.2
   uuid: ^4.6.0
 
 dev_dependencies:
+  build_runner: ^2.15.1
+  drift_dev: ^2.34.0
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
