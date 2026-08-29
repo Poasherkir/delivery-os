@@ -391,6 +391,14 @@ query written from now on follows them.
   an unrecognised name **throws** and never falls back to a default — an unknown
   status is corrupt data, and defaulting to `pending` would resurrect a
   delivered order along with the money attached to it.
+- **Business dates are stored as `TEXT` in `YYYY-MM-DD` form**, not as
+  timestamps. `service_date`, `effective_from` and `covers_from`/`covers_to`
+  are calendar dates, not instants: they have no time and no timezone, and
+  giving them one invites exactly the 00:30 confusion §6.1 warns about. ISO
+  text sorts correctly, is unambiguous, and is readable in a database browser.
+  No converter yet — a `ServiceDate` value object arrives in M2 with the batch
+  work and the cutoff-hour decision, and TEXT is the storage shape either way,
+  so it needs no migration.
 - **The SQLite build is bundled, and it is SQLCipher.** `package:sqlite3` 3.x
   ships its own binary through Dart hooks on every platform, including the test
   host, so there is no `sqlite3_flutter_libs` plugin and no `sqlite3.dll` to
@@ -415,7 +423,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- ============ IDENTITY ============
 CREATE TABLE users (
   id            UUID PRIMARY KEY,
-  phone         TEXT UNIQUE NOT NULL,
+  phone         TEXT UNIQUE,           -- null until an account exists (V2)
   display_name  TEXT NOT NULL,
   locale        TEXT NOT NULL DEFAULT 'ar',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -439,14 +447,26 @@ CREATE TABLE companies (
 );
 
 -- Versioned and immutable once referenced by an order.
+-- Append-only (invariant 3, category 2). A new rule is a new row at
+-- rule_version + 1; there is no update path, ever.
 CREATE TABLE payment_rules (
   id            UUID PRIMARY KEY,
+  owner_id      UUID NOT NULL REFERENCES users(id),
   company_id    UUID NOT NULL REFERENCES companies(id),
-  version       INT  NOT NULL,
-  spec          JSONB NOT NULL,      -- see §12 for the schema
+  -- Business data, NOT the audit column from invariant 3. This is the number
+  -- orders.payment_rule_version pins. Named rule_version so nobody "fixes" the
+  -- collision later by attaching a stamper to it.
+  rule_version  INT  NOT NULL,
+  -- Raw JSON. Deliberately NOT deserialized through a typed model: rule specs
+  -- are pinned per order and §12.2 requires that editing a company's rule never
+  -- changes a historical settlement. A typed column would make every stored
+  -- rule unreadable, or silently reinterpreted, the day the spec gains a field.
+  -- The spec's own `version` field tells a version-aware parser which shape to
+  -- expect. The database stores bytes; the domain decides meaning.
+  spec          TEXT NOT NULL,       -- see §12 for the document schema
   effective_from DATE NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (company_id, version)
+  UNIQUE (company_id, rule_version)
 );
 
 -- ============ GEOGRAPHY REFERENCE (bundled asset) ============
@@ -454,7 +474,7 @@ CREATE TABLE wilayas (
   code       SMALLINT PRIMARY KEY,     -- no range constraint: see §1.5
   name_fr    TEXT NOT NULL,
   name_ar    TEXT NOT NULL,
-  centroid   GEOGRAPHY(POINT,4326) NOT NULL
+  centroid   GEOGRAPHY(POINT,4326)     -- nullable: a dataset may omit it
 );
 
 CREATE TABLE communes (
@@ -462,7 +482,13 @@ CREATE TABLE communes (
   wilaya_code SMALLINT NOT NULL REFERENCES wilayas(code),
   name_fr     TEXT NOT NULL,
   name_ar     TEXT NOT NULL,
-  centroid    GEOGRAPHY(POINT,4326) NOT NULL
+  centroid    GEOGRAPHY(POINT,4326),   -- nullable: a dataset may omit it
+  -- GeoJSON polygon, nullable. Point-in-polygon is the correct commune gate
+  -- for promoting a captured pin (§10.5 gate 2); a radius from a centroid is
+  -- not, because an Algiers commune is a few square kilometres and a Saharan
+  -- one is thousands. Unused in M0. If the bundled dataset carries boundaries
+  -- the column is already here; if not, gate 2 degrades as documented.
+  boundary    TEXT
 );
 
 -- ============ CUSTOMERS ============
@@ -1538,6 +1564,17 @@ field a phone number".
 38. **Gate:** 20 stops solve in under 100 ms; re-optimize works offline from cache.
 
 ### Week 8–10 (M5)
+
+**Release APKs are split per ABI, and x86_64 does not ship.** SQLCipher adds
+about 5 MB of native library per architecture, so a fat APK carries roughly
+15 MB that no single device can use. A driver often receives this app as an APK
+shared over WhatsApp or Telegram rather than from Play, so an App Bundle alone
+does not solve it — the artifact handed around has to be small by itself.
+
+- `arm64-v8a` — the primary, and what almost every device since 2017 runs
+- `armeabi-v7a` — older hardware, which this market still has plenty of
+- `x86_64` — emulator only. Not shipped.
+
 
 39. Home dashboard assembling batch progress, next stop, money, and route summary.
 40. History list and day drill-down.
