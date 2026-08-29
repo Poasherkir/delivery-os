@@ -366,9 +366,46 @@ Written as Postgres + PostGIS (the V2 target). The Drift schema for MVP is the s
 ### 6.1 Conventions
 
 - Primary keys are **UUIDv7**, generated client-side. This is non-negotiable: offline creation needs stable IDs and UUIDv7 keeps them time-sortable for index locality.
-- Every table carries `owner_id`, `created_at`, `updated_at`, `deleted_at` (soft delete), and `version` (integer, incremented on write) for sync.
+- **Which audit columns a table carries depends on its category** — owned mutable entity, append-only record, bundled reference data, or purgeable cache. The four categories and the two deliberate exceptions (`route_stops`, `users`) are the table in `CLAUDE.md` invariant 3. Not every table carries all five.
+- `version` increments on **every** write, including a soft delete. It is never left to a DAO to remember: `EntityStamper` produces the stamp and a guard fails the build on a write that bypasses it.
 - All money is `BIGINT` in **centimes**. Never numeric, never float.
-- Timestamps are `TIMESTAMPTZ`, always UTC. Business day is a separate `DATE` column (`service_date`) because a delivery at 00:30 belongs to the previous working day.
+- Timestamps are `TIMESTAMPTZ`, always UTC. Business day is a separate `DATE` column (`service_date`) because a delivery at 00:30 belongs to the previous working day. Algeria is UTC+1 year-round with no DST, so that is a fixed offset rather than a timezone-database problem; only the cutoff hour is open.
+
+#### SQLite specifics
+
+The MVP runs this schema on SQLite, so four conventions are fixed here and every
+query written from now on follows them.
+
+- **Timestamps are stored as `INTEGER` milliseconds since the Unix epoch, UTC.**
+  Not Drift's `dateTime()`, which stores Unix *seconds* — too coarse for
+  `delivery_attempts` and `outbox`, where three parcels marked delivered in the
+  same lift would come back in an arbitrary order.
+- **Ordering is always `ORDER BY created_at, id`.** Milliseconds still collide.
+  UUIDv7 is time-sortable and its canonical text form sorts lexicographically in
+  chronological order, so the id breaks the tie deterministically rather than
+  arbitrarily. A query that orders by `created_at` alone is a bug waiting for a
+  busy morning.
+- **Enums are stored as `TEXT`, by name.** Never as an ordinal: inserting a
+  status into the middle of an enum would silently reassign every existing row,
+  turning delivered orders into something else with no error anywhere. Decoding
+  an unrecognised name **throws** and never falls back to a default — an unknown
+  status is corrupt data, and defaulting to `pending` would resurrect a
+  delivered order along with the money attached to it.
+- **The SQLite build is bundled, and it is SQLCipher.** `package:sqlite3` 3.x
+  ships its own binary through Dart hooks on every platform, including the test
+  host, so there is no `sqlite3_flutter_libs` plugin and no `sqlite3.dll` to
+  locate on Windows. The build is selected in `pubspec.yaml`:
+
+  ```yaml
+  hooks:
+    user_defines:
+      sqlite3:
+        source: sqlcipher
+  ```
+
+  Chosen from the first schema commit rather than at M0-19 so the engine never
+  changes underneath the data — M0-19 adds the key, it does not swap the binary.
+  `sqlcipher_flutter_libs` is obsolete; its final release is an empty package.
 
 ### 6.2 Core DDL
 
