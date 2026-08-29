@@ -148,6 +148,10 @@ being asked.
   editor, unreviewable in a diff, and silently mangled by a copy-paste. Write
   `String.fromCharCode(0x200E)`, not the character. Prose in comments is exempt;
   string literals are not.
+- **Never `git add -A`. Stage explicitly, by path.** A blanket stage lets one
+  commit silently swallow another concern's work — a docs commit absorbing a
+  whole task's implementation — which defeats the point of splitting commits by
+  concern at all. `git status` before every commit, and name what goes in.
 - **Amend freely while unpushed, never after.** A commit that fails its own CI
   gate must not sit permanently in history, so fix it by amending while the
   branch is still local. Once a commit is on the remote it is immutable: fix
