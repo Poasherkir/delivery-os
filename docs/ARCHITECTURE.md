@@ -499,7 +499,7 @@ CREATE TABLE customers (
   phone_alt      TEXT,
   display_name   TEXT NOT NULL,
   notes          TEXT,
-  risk_flag      SMALLINT NOT NULL DEFAULT 0,  -- 0 none, 1 watch, 2 problem
+  risk_flag      TEXT NOT NULL DEFAULT 'none', -- none|watch|problem
   total_orders   INT NOT NULL DEFAULT 0,
   total_delivered INT NOT NULL DEFAULT 0,
   total_failed   INT NOT NULL DEFAULT 0,
@@ -512,8 +512,12 @@ CREATE TABLE customers (
 );
 
 -- The learned-pin geocoder lives here.
+-- On SQLite every GEOGRAPHY(POINT) below becomes latitude REAL, longitude REAL
+-- and geohash TEXT (precision 9, prefix-queried). PostGIS and a GIST index are
+-- the V2 equivalent; the geohash column is what replaces them until then.
 CREATE TABLE customer_addresses (
   id             UUID PRIMARY KEY,
+  owner_id       UUID NOT NULL REFERENCES users(id),
   customer_id    UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   wilaya_code    SMALLINT NOT NULL REFERENCES wilayas(code),
   commune_id     INT NOT NULL REFERENCES communes(id),
@@ -588,10 +592,15 @@ CREATE TABLE orders (
 
 CREATE TABLE delivery_attempts (
   id           UUID PRIMARY KEY,
+  owner_id     UUID NOT NULL REFERENCES users(id),
   order_id     UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   attempt_no   SMALLINT NOT NULL,
+  -- Provisional, and a different axis from orders.status: an attempt records
+  -- what happened at the door, the status records where the parcel now stands.
+  -- Collapsed from eight — `absent` overlapped `no_answer` and `rescheduled`
+  -- overlapped `postponed`. Additions come from observed field failures.
   outcome      TEXT NOT NULL,   -- delivered|no_answer|refused|wrong_address|
-                                -- absent|rescheduled|postponed|returned
+                                -- postponed|cancelled
   outcome_note TEXT,
   geo          GEOGRAPHY(POINT,4326),
   accuracy_m   INT,             -- radius reported with the fix; see §10.5
@@ -601,6 +610,7 @@ CREATE TABLE delivery_attempts (
 
 CREATE TABLE proof_of_delivery (
   id            UUID PRIMARY KEY,
+  owner_id      UUID NOT NULL REFERENCES users(id),
   order_id      UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   photo_path    TEXT,          -- local path in MVP; object key in V2
   signature_path TEXT,
@@ -776,36 +786,69 @@ CREATE INDEX idx_outbox_pending ON outbox(created_at) WHERE synced_at IS NULL;
 
 ### 6.4 Order state machine
 
+Eight states. `settled` is **not** one of them — see below.
+
 ```
                     ┌──────────┐
-                    │ pending  │  (imported, not yet on a route)
+                    │ pending  │  in a batch, not yet on a route
                     └────┬─────┘
                          │ assign to route
                     ┌────▼─────┐
-              ┌─────┤ on_route │◄──────────┐
-              │     └────┬─────┘           │
-              │          │ mark arrived    │ re-attempt
-              │     ┌────▼─────┐           │ (next day)
-              │     │ arrived  │           │
-              │     └──┬────┬──┘           │
-              │        │    │              │
-     skip ────┘   ┌────▼┐  ┌▼──────────┐   │
-                  │ deli│  │  failed   ├───┘
-                  │vered│  └─────┬─────┘
-                  └──┬──┘        │ attempts exhausted
-                     │      ┌────▼──────────────┐
-                     │      │ returned_to_agency│
-                     │      └───────────────────┘
-                     │
-             ┌───────▼────────┐
-             │    settled     │  (batch confirmed, immutable)
-             └────────────────┘
-
-Also: cancelled (by merchant, any time before delivered)
-      rescheduled (customer asked for another day → back to pending, new batch)
+              ┌─────┤ on_route │◄──────────────┐
+              │     └────┬─────┘               │
+              │          │ mark arrived        │ re-attempt, same day
+              │     ┌────▼─────┐               │
+              │     │ arrived  │               │
+              │     └──┬────┬──┘               │
+     skip ────┘        │    │                  │
+                  ┌────▼┐  ┌▼─────────┐        │
+                  │deliv│  │  failed  ├────────┘
+                  │ered │  └────┬─────┘
+                  └─────┘       │ resolved at end of day
+                       ▲        │
+                       │   ┌────┴──────────────┬─────────────────┐
+                       │   │                   │                 │
+                       │ ┌─▼───────────────┐ ┌─▼──────────────┐  │
+                       │ │ rescheduled     │ │ returned_to_   │  │
+                       │ │ (future date,   │ │ agency         │  │
+                       │ │  leaves today)  │ └────────────────┘  │
+                       │ └─┬───────────────┘                     │
+                       │   │ new batch, new day                  │
+                       └───┴─── pending ──────────────────────┐  │
+                                                              │  │
+  cancelled (by merchant, any time before delivered) ─────────┴──┘
 ```
 
-Enforce transitions in a single pure function `OrderStatus.canTransitionTo(next)`. Every transition writes a `delivery_attempts` row where applicable. This function is what makes offline conflict resolution tractable (see §11).
+**Terminal states** — the order is finished forever: `delivered`,
+`returned_to_agency`, `cancelled`.
+
+**`failed` is deliberately not terminal.** It means *attempt failed, disposition
+pending*. At the end of the day the driver resolves every `failed` order into
+either `rescheduled` or `returned_to_agency`, and that distinction is financial
+rather than cosmetic: a rescheduled parcel is still in the driver's possession
+and has earned nothing yet, while a returned one triggers the retour fee in the
+rule spec.
+
+**A batch cannot be settled while any of its orders is in an open state.** The
+closed states are the terminal three plus `rescheduled`; `pending`, `on_route`,
+`arrived` and `failed` are open. This is a settlement precondition (§12.3) and
+the reason every `failed` order must be resolved before the day closes.
+
+**`settled` is not an order state.** Settlement is a fact about the *batch*, held
+in `batches.status`. Modelling it as an order status would destroy information:
+an order that is both `delivered` and inside a settled batch would lose its
+delivery outcome, and with it the ability to reproduce the settlement that was
+computed from it. Order immutability after settlement follows from the batch's
+status, not from overwriting the order's.
+
+**`assigned` and `optimizing` do not exist.** There is one driver in the MVP, so
+assignment is meaningless; `optimizing` is a UI state with no business being
+persisted.
+
+Enforce transitions in a single pure function, `OrderStateMachine.transitionTo`
+(invariant 6). Every transition writes a `delivery_attempts` row where
+applicable. That function is what makes offline conflict resolution tractable
+(see §11).
 
 ---
 
