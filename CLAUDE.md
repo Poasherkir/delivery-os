@@ -154,6 +154,17 @@ being asked.
   silently into a source file that only the analyzer caught. A tool that
   corrupts content under quoting is not a tool for content. Shell is for
   commands.
+- **On a major version bump of any dependency that handles keys, crypto or
+  persistent storage, re-read its defaults before upgrading.** Behaviour does
+  not carry across a major, and the dangerous changes are the silent ones:
+  `flutter_secure_storage` 11 flipped `resetOnError` from `false` to `true`, a
+  flag its own docs say will "PERMANENTLY erase the data when an error occurs"
+  — the only copy of the database key, on a transient error, with no prompt.
+  Say in the commit message what was checked.
+- **A commit that changes a table regenerates the schema dump in the same
+  commit.** Otherwise `drift_schema/` describes a database that no longer
+  exists, and every migration test after that is validating against fiction.
+  A test enforces it; this is why.
 - **Never `git add -A`. Stage explicitly, by path.** A blanket stage lets one
   commit silently swallow another concern's work — a docs commit absorbing a
   whole task's implementation — which defeats the point of splitting commits by

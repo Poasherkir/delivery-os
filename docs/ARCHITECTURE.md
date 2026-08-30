@@ -1445,7 +1445,21 @@ Assumes roughly 15–20 hours per week alongside your L3 coursework.
 | Data | `drift/native` in-memory SQLite | 70% | DAO queries, transaction atomicity, outbox writes |
 | Widget | `flutter_test` | Key flows | Next-stop card, delivery sheet, settlement confirmation |
 | Integration | `integration_test` | 5 scenarios | Full offline day; import → route → deliver → settle; failure → re-optimize; reschedule across days; backup → wipe → restore |
+| Encryption | `drift/native` on a temp file | Every path | The file has no `SQLite format 3` header; a wrong key throws rather than returning an empty database; an existing database is never re-keyed |
 | Manual | Checklist | Every release | Airplane-mode day, low battery, Arabic RTL screenshots of every screen, a device with 2 GB RAM |
+
+**Encryption is verified in CI, not only on a device.** This was not true when
+§13 was written and is worth stating plainly, because the old assumption would
+otherwise justify skipping the tests that matter most here: `package:sqlite3`
+bundles the SQLCipher build on every platform including the Dart test host, so a
+test can write a real encrypted file, read its raw bytes, and prove a wrong key
+is rejected.
+
+The only device-only part is the **keystore** itself. What the host cannot check
+is whether Android actually persisted the key — so that layer is kept behind
+`DatabaseKeyStore`, and every rule about *when* a key may be created is tested
+against a fake. The plugin's own options are pinned by a test too, after
+`flutter_secure_storage` 11 flipped `resetOnError` to `true`.
 
 The property tests on the money engine matter most. A subtle rounding bug in a commission formula surfaces as a 3 DA discrepancy after 40 orders, and that is exactly the kind of error that destroys a driver's trust permanently.
 
