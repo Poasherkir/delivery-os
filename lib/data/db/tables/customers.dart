@@ -15,6 +15,21 @@ import 'users.dart';
 /// works for. That accumulation is the product's compounding asset (§1.3): the
 /// customer database *is* the geocoder, because Algerian addresses do not
 /// geocode and learned pins keyed by phone number are the only accurate source.
+// The identity path, and it must be instant: every order entry looks a
+// customer up by normalized phone before anything else happens.
+//
+// A partial unique index rather than a table constraint, per §6.3. The
+// difference is that a soft-deleted customer no longer blocks re-adding the
+// same number — which a driver will do, and being refused by a row they
+// cannot see would be inexplicable.
+@TableIndex.sql(
+  'CREATE UNIQUE INDEX idx_customers_owner_phone '
+  'ON customers (owner_id, phone_e164) WHERE deleted_at IS NULL',
+)
+// No SQLite equivalent for §6.3's idx_customers_name_trgm (GIN + trigram).
+// The answer here is an FTS5 virtual table, and it lands with customer name
+// search in M1 rather than now: a virtual table and its sync triggers are
+// real work and there is nothing to search yet.
 class Customers extends Table with UuidPrimaryKey, OwnedMutableColumns {
   @override
   TextColumn get ownerId =>
@@ -54,13 +69,6 @@ class Customers extends Table with UuidPrimaryKey, OwnedMutableColumns {
 
   IntColumn get lastDeliveredAt =>
       integer().map(const UtcMillisecondsConverter()).nullable()();
-
-  /// One row per phone per driver. This is what makes duplicate detection work
-  /// at import, and it only holds because PhoneE164 normalization is total.
-  @override
-  List<Set<Column<Object>>> get uniqueKeys => <Set<Column<Object>>>[
-    <Column<Object>>{ownerId, phoneE164},
-  ];
 }
 
 /// Where a customer takes delivery, and how much the coordinate is trusted.
@@ -69,6 +77,11 @@ class Customers extends Table with UuidPrimaryKey, OwnedMutableColumns {
 /// is raised by evidence — a driver placing it on the map, then a GPS fix taken
 /// at the door on an actual delivery. It is only ever lowered deliberately, by
 /// a correction that records why.
+// Commune-scoped lookups, and the join the address picker leans on.
+@TableIndex(name: 'idx_addr_commune', columns: {#communeId})
+// No SQLite equivalent for §6.3's idx_addr_geo (GiST on the geography
+// column). The geohash column is what replaces it: prefix queries at
+// whatever precision the caller needs.
 @DataClassName('CustomerAddress')
 class CustomerAddresses extends Table
     with UuidPrimaryKey, OwnedMutableColumns, GeoFixColumns {

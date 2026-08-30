@@ -12,6 +12,10 @@ import 'users.dart';
 /// The unit of daily work and the unit of settlement (§2.1). A driver working
 /// two companies in one day has **two batches and one route** — the route spans
 /// batches, which is easy to get wrong and expensive to fix later.
+// Newest first: every screen that lists batches wants today at the top.
+@TableIndex.sql(
+  'CREATE INDEX idx_batches_owner_date ON batches (owner_id, service_date DESC)',
+)
 @DataClassName('Batch')
 class Batches extends Table with UuidPrimaryKey, OwnedMutableColumns {
   @override

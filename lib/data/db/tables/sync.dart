@@ -23,6 +23,12 @@ import 'users.dart';
 /// [id] doubles as the idempotency key (§7.1). A command replayed after a
 /// connection drops must not be applied twice, and the row's own id is what the
 /// server dedupes on.
+// The queue drain reads only unsent rows, oldest first. A partial index
+// keeps it proportional to the backlog rather than to everything ever sent.
+@TableIndex.sql(
+  'CREATE INDEX idx_outbox_pending ON outbox (created_at) '
+  'WHERE synced_at IS NULL',
+)
 class Outbox extends Table with UuidPrimaryKey {
   TextColumn get entityType => text().withLength(min: 1, max: 60)();
 

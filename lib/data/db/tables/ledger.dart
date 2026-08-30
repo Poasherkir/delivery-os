@@ -14,6 +14,9 @@ import 'users.dart';
 /// An owned mutable entity: a driver mistypes a fuel amount and fixes it. These
 /// come off the driver's own earnings, never off the company's amount, which is
 /// why they are their own table rather than another column on an order.
+@TableIndex.sql(
+  'CREATE INDEX idx_expenses_owner_date ON expenses (owner_id, service_date DESC)',
+)
 class Expenses extends Table with UuidPrimaryKey, OwnedMutableColumns {
   @override
   TextColumn get ownerId =>
@@ -44,6 +47,10 @@ class Expenses extends Table with UuidPrimaryKey, OwnedMutableColumns {
 /// for a batch, the money for that day is decided. Corrections become
 /// [SettlementAdjustments] rows; there is no update path and there never will
 /// be one.
+@TableIndex.sql(
+  'CREATE INDEX idx_settlements_owner_date '
+  'ON daily_settlements (owner_id, service_date DESC)',
+)
 class DailySettlements extends Table with UuidPrimaryKey, AppendOnlyColumns {
   @override
   TextColumn get ownerId =>
@@ -135,6 +142,10 @@ class SettlementAdjustments extends Table
 /// A remittance is not tied to a batch or a day. The driver may hold cash for
 /// two or three days and then settle several batches at once, which is why
 /// [coversFrom] and [coversTo] are a range rather than a foreign key (§1.3).
+@TableIndex.sql(
+  'CREATE INDEX idx_remit_owner_company '
+  'ON remittances (owner_id, company_id, remitted_at DESC)',
+)
 class Remittances extends Table with UuidPrimaryKey, OwnedMutableColumns {
   @override
   TextColumn get ownerId =>

@@ -25,6 +25,19 @@ import 'users.dart';
 /// `cod_amount − driver_commission − other_fees`. Rounding two of them
 /// independently is how `Σ company_amount + Σ driver_commission ==
 /// Σ collected_amount` silently stops holding (§12.2).
+// The hot path: today's work, filtered by status, excluding soft-deleted
+// rows. Partial indexes carry over from Postgres to SQLite unchanged.
+@TableIndex.sql(
+  'CREATE INDEX idx_orders_owner_status ON orders (owner_id, status) '
+  'WHERE deleted_at IS NULL',
+)
+@TableIndex.sql(
+  'CREATE INDEX idx_orders_batch ON orders (batch_id) '
+  'WHERE deleted_at IS NULL',
+)
+// Duplicate detection at import. Not unique — the uniqueness that matters
+// is (owner, company, tracking), which is a table constraint.
+@TableIndex(name: 'idx_orders_tracking', columns: {#ownerId, #trackingNumber})
 class Orders extends Table with UuidPrimaryKey, OwnedMutableColumns {
   @override
   TextColumn get ownerId =>

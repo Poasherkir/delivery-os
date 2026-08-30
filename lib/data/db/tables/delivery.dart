@@ -18,6 +18,8 @@ import 'users.dart';
 /// Returns are 15–25% of this business (§1.2). A parcel can be attempted across
 /// several days, so the attempt history — not the order's current status — is
 /// what explains why the money came out the way it did.
+// No SQLite equivalent for §6.3's idx_attempts_geo (GiST). Prefix-query the
+// geohash column instead.
 class DeliveryAttempts extends Table
     with UuidPrimaryKey, AppendOnlyColumns, GeoFixColumns {
   @override

@@ -64,4 +64,44 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) => m.createAll(),
+
+    // Every one of these is **per connection**, not a property of the file, so
+    // they are set on open rather than once at creation. `journal_mode` is the
+    // exception — it persists — but setting it again costs nothing and means
+    // one place to read rather than two.
+    //
+    // They are asserted from an *opened database* in the schema test rather
+    // than trusted here, because this is exactly the code that gets refactored
+    // and silently dropped.
+    beforeOpen: (OpeningDetails details) async {
+      // SQLite ignores foreign keys unless asked. Without this every
+      // REFERENCES clause in the schema is decoration, and an orphaned
+      // order_id would sit there until something tried to read through it.
+      //
+      // A no-op inside a transaction, which is why it belongs here.
+      await customStatement('PRAGMA foreign_keys = ON');
+
+      // The phone is dropped, run flat, and killed by an OEM task manager
+      // mid-shift. WAL survives all three materially better than the rollback
+      // journal, and it lets a read proceed while a write is in flight.
+      await customStatement('PRAGMA journal_mode = WAL');
+
+      // FULL, not the usual NORMAL, and this is the one place the slower
+      // setting is wanted.
+      //
+      // With WAL and NORMAL, an OS crash or sudden power loss can lose the
+      // last committed transaction. Here that transaction is a driver marking
+      // a parcel delivered and 6 400 DA collected — a record that exists
+      // nowhere else, in an app whose entire claim is that the money
+      // reconciles. Writes are small and infrequent; a few milliseconds per
+      // commit is invisible and losing a delivery is not.
+      //
+      // Do not "optimize" this back to NORMAL.
+      await customStatement('PRAGMA synchronous = FULL');
+    },
+  );
 }

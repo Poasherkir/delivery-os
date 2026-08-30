@@ -2936,10 +2936,6 @@ class $CustomersTable extends Customers
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {ownerId, phoneE164},
-  ];
-  @override
   Customer map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Customer(
@@ -15131,6 +15127,46 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RemittancesTable remittances = $RemittancesTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $AuditLogsTable auditLogs = $AuditLogsTable(this);
+  late final Index idxCustomersOwnerPhone = Index(
+    'idx_customers_owner_phone',
+    'CREATE UNIQUE INDEX idx_customers_owner_phone ON customers (owner_id, phone_e164) WHERE deleted_at IS NULL',
+  );
+  late final Index idxAddrCommune = Index(
+    'idx_addr_commune',
+    'CREATE INDEX idx_addr_commune ON customer_addresses (commune_id)',
+  );
+  late final Index idxBatchesOwnerDate = Index(
+    'idx_batches_owner_date',
+    'CREATE INDEX idx_batches_owner_date ON batches (owner_id, service_date DESC)',
+  );
+  late final Index idxOrdersOwnerStatus = Index(
+    'idx_orders_owner_status',
+    'CREATE INDEX idx_orders_owner_status ON orders (owner_id, status) WHERE deleted_at IS NULL',
+  );
+  late final Index idxOrdersBatch = Index(
+    'idx_orders_batch',
+    'CREATE INDEX idx_orders_batch ON orders (batch_id) WHERE deleted_at IS NULL',
+  );
+  late final Index idxOrdersTracking = Index(
+    'idx_orders_tracking',
+    'CREATE INDEX idx_orders_tracking ON orders (owner_id, tracking_number)',
+  );
+  late final Index idxExpensesOwnerDate = Index(
+    'idx_expenses_owner_date',
+    'CREATE INDEX idx_expenses_owner_date ON expenses (owner_id, service_date DESC)',
+  );
+  late final Index idxSettlementsOwnerDate = Index(
+    'idx_settlements_owner_date',
+    'CREATE INDEX idx_settlements_owner_date ON daily_settlements (owner_id, service_date DESC)',
+  );
+  late final Index idxRemitOwnerCompany = Index(
+    'idx_remit_owner_company',
+    'CREATE INDEX idx_remit_owner_company ON remittances (owner_id, company_id, remitted_at DESC)',
+  );
+  late final Index idxOutboxPending = Index(
+    'idx_outbox_pending',
+    'CREATE INDEX idx_outbox_pending ON outbox (created_at) WHERE synced_at IS NULL',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -15156,6 +15192,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     remittances,
     outbox,
     auditLogs,
+    idxCustomersOwnerPhone,
+    idxAddrCommune,
+    idxBatchesOwnerDate,
+    idxOrdersOwnerStatus,
+    idxOrdersBatch,
+    idxOrdersTracking,
+    idxExpensesOwnerDate,
+    idxSettlementsOwnerDate,
+    idxRemitOwnerCompany,
+    idxOutboxPending,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
