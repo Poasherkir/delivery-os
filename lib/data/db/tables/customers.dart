@@ -10,6 +10,18 @@ import 'users.dart';
 
 /// A person who receives parcels.
 ///
+/// **There is deliberately no restore.** A soft-deleted customer stays deleted:
+/// if the number is re-added, the new record wins. Restoring into a collision
+/// with the partial unique index on `(owner_id, phone_e164)` is a problem with
+/// no good answer, and it would exist only because the operation was invented.
+/// `EntityStamper.forRestore` is for other entities.
+///
+/// What the product actually needs is **merge**, which is an M1 feature: two
+/// records for one human happens for real reasons — a number entered before
+/// normalization improved, or the same customer arriving from two companies.
+/// Merge moves orders and addresses onto the surviving record, unions the
+/// learned pins keeping the highest confidence, and soft-deletes the loser.
+///
 /// **Permanent, and identified by phone.** Orders are transient; a customer
 /// accumulates addresses, pins and history across every company the driver
 /// works for. That accumulation is the product's compounding asset (§1.3): the

@@ -1579,6 +1579,21 @@ plan in 2008 and older landline formats were shorter. Verify against a real
 manifest before hardening ingestion, and until then let unparseable numbers
 through rather than rejecting a real customer.
 
+**Customers merge; they do not restore.** The unique index on
+`(owner_id, phone_e164)` is partial — `WHERE deleted_at IS NULL` — so a
+soft-deleted customer does not block re-adding the same number, which is what a
+driver will do. The consequence is that restoring the old record could collide
+with the new one, so restore is simply not offered: the newer record wins and
+the older stays deleted.
+
+The real need is a **merge** flow, and it is a genuine M1 feature rather than a
+workaround. Two records for one human happens for ordinary reasons — a number
+entered before normalization improved, the same customer arriving through two
+companies. Merge moves orders and addresses onto the surviving record, unions
+the learned pins keeping the highest confidence for each address, and
+soft-deletes the loser. Losing a confidence-4 pin to a merge would waste exactly
+the evidence §10.5 exists to protect.
+
 **"Parses as a phone" is not a classifier.** `PhoneE164` accepts a bare
 nine-digit national number, so a nine-digit tracking number beginning with 5, 6
 or 7 parses cleanly as a mobile. The paste and OCR parsers (V1.5) must classify
