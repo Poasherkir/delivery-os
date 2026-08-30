@@ -1,8 +1,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Nothing this app stores leaves the device.
+
+      The database is encrypted with a non-exportable Android Keystore key, so
+      a backup restored onto another device arrives with no key that can ever
+      open it. It would surface as an app that starts and cannot read its own
+      data. Absent is better than present and unreadable.
+
+      allowBackup covers cloud backup on Android 11 and below;
+      dataExtractionRules covers both cloud backup and device-to-device
+      transfer on 12 and above, which allowBackup does not.
+    -->
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

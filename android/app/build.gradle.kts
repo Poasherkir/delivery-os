@@ -6,7 +6,13 @@ plugins {
 
 android {
     namespace = "dz.deliveryos.driver"
-    compileSdk = flutter.compileSdkVersion
+    // 37, not Flutter's default of 36: flutter_secure_storage 11 requires it.
+    // That package holds the only copy of the database encryption key, and
+    // version 11 is where its Android implementation moved to AES-GCM with
+    // RSA-OAEP-SHA256 key wrapping, replacing 9.x's PKCS1v1.5. For the one
+    // secret in this app that protects a driver's entire history, the newer
+    // primitive is worth the SDK bump.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

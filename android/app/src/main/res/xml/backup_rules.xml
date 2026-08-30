@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 and below. Redundant alongside android:allowBackup="false", and
+  kept deliberately: if allowBackup is ever flipped back on for some other
+  reason, the database and the secure-storage preferences must still not
+  travel.
+
+  See data_extraction_rules.xml for why — the encryption key is non-exportable,
+  so a restored database is a file nothing can ever open.
+-->
+<full-backup-content>
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="." />
+</full-backup-content>

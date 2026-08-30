@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12 and above.
+
+  Nothing this app stores may leave the device, and the reason is narrower than
+  privacy: the database is encrypted with a key held in the Android Keystore,
+  and that key is non-exportable by design. A database restored onto a new
+  device therefore arrives with no key that can ever open it.
+
+  Restoring it would produce a confusing failure — an app that starts, finds a
+  file it cannot decrypt, and has to explain that to a driver — where simply not
+  restoring it produces a clean first launch. Absent is better than present and
+  unreadable.
+
+  The secure-storage preferences file is excluded for the same reason: its
+  contents are ciphertext under a key that does not exist on the new device.
+
+  `android:allowBackup="false"` in the manifest already covers cloud backup on
+  older releases. This file is what covers device-to-device transfer on 12+,
+  which allowBackup does not.
+
+  V1.5's encrypted backup and restore is the real answer for a driver changing
+  phones, and it will carry its own key material deliberately rather than
+  relying on the platform.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
