@@ -5691,15 +5691,15 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
       ).withConverter<DateTime?>($OrdersTable.$converterdeliveredAtn);
   @override
   late final GeneratedColumnWithTypeConverter<DeliveryAttemptOutcome?, String>
-  failureReason =
+  lastAttemptOutcome =
       GeneratedColumn<String>(
-        'failure_reason',
+        'last_attempt_outcome',
         aliasedName,
         true,
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       ).withConverter<DeliveryAttemptOutcome?>(
-        $OrdersTable.$converterfailureReasonn,
+        $OrdersTable.$converterlastAttemptOutcomen,
       );
   @override
   List<GeneratedColumn> get $columns => [
@@ -5731,7 +5731,7 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     paymentRuleVersion,
     attemptCount,
     deliveredAt,
-    failureReason,
+    lastAttemptOutcome,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6003,10 +6003,10 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
           data['${effectivePrefix}delivered_at'],
         ),
       ),
-      failureReason: $OrdersTable.$converterfailureReasonn.fromSql(
+      lastAttemptOutcome: $OrdersTable.$converterlastAttemptOutcomen.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.string,
-          data['${effectivePrefix}failure_reason'],
+          data['${effectivePrefix}last_attempt_outcome'],
         ),
       ),
     );
@@ -6057,14 +6057,15 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
       const UtcMillisecondsConverter();
   static TypeConverter<DateTime?, int?> $converterdeliveredAtn =
       NullAwareTypeConverter.wrap($converterdeliveredAt);
-  static TypeConverter<DeliveryAttemptOutcome, String> $converterfailureReason =
+  static TypeConverter<DeliveryAttemptOutcome, String>
+  $converterlastAttemptOutcome =
       const EnumTextConverter<DeliveryAttemptOutcome>(
         DeliveryAttemptOutcome.values,
         'DeliveryAttemptOutcome',
       );
   static TypeConverter<DeliveryAttemptOutcome?, String?>
-  $converterfailureReasonn = NullAwareTypeConverter.wrap(
-    $converterfailureReason,
+  $converterlastAttemptOutcomen = NullAwareTypeConverter.wrap(
+    $converterlastAttemptOutcome,
   );
 }
 
@@ -6143,10 +6144,22 @@ class Order extends DataClass implements Insertable<Order> {
   final int attemptCount;
   final DateTime? deliveredAt;
 
-  /// The outcome of the most recent failed attempt, denormalized from
-  /// `delivery_attempts` so an order list renders without a join. The attempts
-  /// table remains the record; this is a cache of its last row.
-  final DeliveryAttemptOutcome? failureReason;
+  /// The outcome of the most recent attempt — **any** attempt, not only a
+  /// failed one. Null means never attempted.
+  ///
+  /// **This is a cache.** `delivery_attempts` is the record; this is a
+  /// denormalization of its most recent row, so an order list renders without a
+  /// join. Nothing derives money from it.
+  ///
+  /// **Written only by the transaction that inserts the attempt**, never set
+  /// independently. That is the EntityStamper argument again: a cache
+  /// maintained by convention drifts out of step with its source, a cache
+  /// maintained by a single write path cannot.
+  ///
+  /// Populated on success as well as failure. A field that is only sometimes
+  /// maintained is worse than one always maintained — a reader has to know
+  /// which case they are in before they can trust it.
+  final DeliveryAttemptOutcome? lastAttemptOutcome;
   const Order({
     required this.id,
     required this.ownerId,
@@ -6176,7 +6189,7 @@ class Order extends DataClass implements Insertable<Order> {
     this.paymentRuleVersion,
     required this.attemptCount,
     this.deliveredAt,
-    this.failureReason,
+    this.lastAttemptOutcome,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6277,9 +6290,9 @@ class Order extends DataClass implements Insertable<Order> {
         $OrdersTable.$converterdeliveredAtn.toSql(deliveredAt),
       );
     }
-    if (!nullToAbsent || failureReason != null) {
-      map['failure_reason'] = Variable<String>(
-        $OrdersTable.$converterfailureReasonn.toSql(failureReason),
+    if (!nullToAbsent || lastAttemptOutcome != null) {
+      map['last_attempt_outcome'] = Variable<String>(
+        $OrdersTable.$converterlastAttemptOutcomen.toSql(lastAttemptOutcome),
       );
     }
     return map;
@@ -6333,9 +6346,9 @@ class Order extends DataClass implements Insertable<Order> {
       deliveredAt: deliveredAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deliveredAt),
-      failureReason: failureReason == null && nullToAbsent
+      lastAttemptOutcome: lastAttemptOutcome == null && nullToAbsent
           ? const Value.absent()
-          : Value(failureReason),
+          : Value(lastAttemptOutcome),
     );
   }
 
@@ -6373,8 +6386,8 @@ class Order extends DataClass implements Insertable<Order> {
       paymentRuleVersion: serializer.fromJson<int?>(json['paymentRuleVersion']),
       attemptCount: serializer.fromJson<int>(json['attemptCount']),
       deliveredAt: serializer.fromJson<DateTime?>(json['deliveredAt']),
-      failureReason: serializer.fromJson<DeliveryAttemptOutcome?>(
-        json['failureReason'],
+      lastAttemptOutcome: serializer.fromJson<DeliveryAttemptOutcome?>(
+        json['lastAttemptOutcome'],
       ),
     );
   }
@@ -6410,8 +6423,8 @@ class Order extends DataClass implements Insertable<Order> {
       'paymentRuleVersion': serializer.toJson<int?>(paymentRuleVersion),
       'attemptCount': serializer.toJson<int>(attemptCount),
       'deliveredAt': serializer.toJson<DateTime?>(deliveredAt),
-      'failureReason': serializer.toJson<DeliveryAttemptOutcome?>(
-        failureReason,
+      'lastAttemptOutcome': serializer.toJson<DeliveryAttemptOutcome?>(
+        lastAttemptOutcome,
       ),
     };
   }
@@ -6445,7 +6458,7 @@ class Order extends DataClass implements Insertable<Order> {
     Value<int?> paymentRuleVersion = const Value.absent(),
     int? attemptCount,
     Value<DateTime?> deliveredAt = const Value.absent(),
-    Value<DeliveryAttemptOutcome?> failureReason = const Value.absent(),
+    Value<DeliveryAttemptOutcome?> lastAttemptOutcome = const Value.absent(),
   }) => Order(
     id: id ?? this.id,
     ownerId: ownerId ?? this.ownerId,
@@ -6479,9 +6492,9 @@ class Order extends DataClass implements Insertable<Order> {
         : this.paymentRuleVersion,
     attemptCount: attemptCount ?? this.attemptCount,
     deliveredAt: deliveredAt.present ? deliveredAt.value : this.deliveredAt,
-    failureReason: failureReason.present
-        ? failureReason.value
-        : this.failureReason,
+    lastAttemptOutcome: lastAttemptOutcome.present
+        ? lastAttemptOutcome.value
+        : this.lastAttemptOutcome,
   );
   Order copyWithCompanion(OrdersCompanion data) {
     return Order(
@@ -6539,9 +6552,9 @@ class Order extends DataClass implements Insertable<Order> {
       deliveredAt: data.deliveredAt.present
           ? data.deliveredAt.value
           : this.deliveredAt,
-      failureReason: data.failureReason.present
-          ? data.failureReason.value
-          : this.failureReason,
+      lastAttemptOutcome: data.lastAttemptOutcome.present
+          ? data.lastAttemptOutcome.value
+          : this.lastAttemptOutcome,
     );
   }
 
@@ -6576,7 +6589,7 @@ class Order extends DataClass implements Insertable<Order> {
           ..write('paymentRuleVersion: $paymentRuleVersion, ')
           ..write('attemptCount: $attemptCount, ')
           ..write('deliveredAt: $deliveredAt, ')
-          ..write('failureReason: $failureReason')
+          ..write('lastAttemptOutcome: $lastAttemptOutcome')
           ..write(')'))
         .toString();
   }
@@ -6611,7 +6624,7 @@ class Order extends DataClass implements Insertable<Order> {
     paymentRuleVersion,
     attemptCount,
     deliveredAt,
-    failureReason,
+    lastAttemptOutcome,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -6645,7 +6658,7 @@ class Order extends DataClass implements Insertable<Order> {
           other.paymentRuleVersion == this.paymentRuleVersion &&
           other.attemptCount == this.attemptCount &&
           other.deliveredAt == this.deliveredAt &&
-          other.failureReason == this.failureReason);
+          other.lastAttemptOutcome == this.lastAttemptOutcome);
 }
 
 class OrdersCompanion extends UpdateCompanion<Order> {
@@ -6677,7 +6690,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
   final Value<int?> paymentRuleVersion;
   final Value<int> attemptCount;
   final Value<DateTime?> deliveredAt;
-  final Value<DeliveryAttemptOutcome?> failureReason;
+  final Value<DeliveryAttemptOutcome?> lastAttemptOutcome;
   final Value<int> rowid;
   const OrdersCompanion({
     this.id = const Value.absent(),
@@ -6708,7 +6721,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     this.paymentRuleVersion = const Value.absent(),
     this.attemptCount = const Value.absent(),
     this.deliveredAt = const Value.absent(),
-    this.failureReason = const Value.absent(),
+    this.lastAttemptOutcome = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OrdersCompanion.insert({
@@ -6740,7 +6753,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     this.paymentRuleVersion = const Value.absent(),
     this.attemptCount = const Value.absent(),
     this.deliveredAt = const Value.absent(),
-    this.failureReason = const Value.absent(),
+    this.lastAttemptOutcome = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        ownerId = Value(ownerId),
@@ -6779,7 +6792,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     Expression<int>? paymentRuleVersion,
     Expression<int>? attemptCount,
     Expression<int>? deliveredAt,
-    Expression<String>? failureReason,
+    Expression<String>? lastAttemptOutcome,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6812,7 +6825,8 @@ class OrdersCompanion extends UpdateCompanion<Order> {
         'payment_rule_version': paymentRuleVersion,
       if (attemptCount != null) 'attempt_count': attemptCount,
       if (deliveredAt != null) 'delivered_at': deliveredAt,
-      if (failureReason != null) 'failure_reason': failureReason,
+      if (lastAttemptOutcome != null)
+        'last_attempt_outcome': lastAttemptOutcome,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6846,7 +6860,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     Value<int?>? paymentRuleVersion,
     Value<int>? attemptCount,
     Value<DateTime?>? deliveredAt,
-    Value<DeliveryAttemptOutcome?>? failureReason,
+    Value<DeliveryAttemptOutcome?>? lastAttemptOutcome,
     Value<int>? rowid,
   }) {
     return OrdersCompanion(
@@ -6878,7 +6892,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
       paymentRuleVersion: paymentRuleVersion ?? this.paymentRuleVersion,
       attemptCount: attemptCount ?? this.attemptCount,
       deliveredAt: deliveredAt ?? this.deliveredAt,
-      failureReason: failureReason ?? this.failureReason,
+      lastAttemptOutcome: lastAttemptOutcome ?? this.lastAttemptOutcome,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6998,9 +7012,11 @@ class OrdersCompanion extends UpdateCompanion<Order> {
         $OrdersTable.$converterdeliveredAtn.toSql(deliveredAt.value),
       );
     }
-    if (failureReason.present) {
-      map['failure_reason'] = Variable<String>(
-        $OrdersTable.$converterfailureReasonn.toSql(failureReason.value),
+    if (lastAttemptOutcome.present) {
+      map['last_attempt_outcome'] = Variable<String>(
+        $OrdersTable.$converterlastAttemptOutcomen.toSql(
+          lastAttemptOutcome.value,
+        ),
       );
     }
     if (rowid.present) {
@@ -7040,7 +7056,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
           ..write('paymentRuleVersion: $paymentRuleVersion, ')
           ..write('attemptCount: $attemptCount, ')
           ..write('deliveredAt: $deliveredAt, ')
-          ..write('failureReason: $failureReason, ')
+          ..write('lastAttemptOutcome: $lastAttemptOutcome, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -13959,7 +13975,7 @@ typedef $$OrdersTableCreateCompanionBuilder =
       Value<int?> paymentRuleVersion,
       Value<int> attemptCount,
       Value<DateTime?> deliveredAt,
-      Value<DeliveryAttemptOutcome?> failureReason,
+      Value<DeliveryAttemptOutcome?> lastAttemptOutcome,
       Value<int> rowid,
     });
 typedef $$OrdersTableUpdateCompanionBuilder =
@@ -13992,7 +14008,7 @@ typedef $$OrdersTableUpdateCompanionBuilder =
       Value<int?> paymentRuleVersion,
       Value<int> attemptCount,
       Value<DateTime?> deliveredAt,
-      Value<DeliveryAttemptOutcome?> failureReason,
+      Value<DeliveryAttemptOutcome?> lastAttemptOutcome,
       Value<int> rowid,
     });
 
@@ -14270,8 +14286,8 @@ class $$OrdersTableFilterComposer
     DeliveryAttemptOutcome,
     String
   >
-  get failureReason => $composableBuilder(
-    column: $table.failureReason,
+  get lastAttemptOutcome => $composableBuilder(
+    column: $table.lastAttemptOutcome,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
@@ -14565,8 +14581,8 @@ class $$OrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get failureReason => $composableBuilder(
-    column: $table.failureReason,
+  ColumnOrderings<String> get lastAttemptOutcome => $composableBuilder(
+    column: $table.lastAttemptOutcome,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14797,8 +14813,8 @@ class $$OrdersTableAnnotationComposer
       );
 
   GeneratedColumnWithTypeConverter<DeliveryAttemptOutcome?, String>
-  get failureReason => $composableBuilder(
-    column: $table.failureReason,
+  get lastAttemptOutcome => $composableBuilder(
+    column: $table.lastAttemptOutcome,
     builder: (column) => column,
   );
 
@@ -15033,7 +15049,7 @@ class $$OrdersTableTableManager
                 Value<int?> paymentRuleVersion = const Value.absent(),
                 Value<int> attemptCount = const Value.absent(),
                 Value<DateTime?> deliveredAt = const Value.absent(),
-                Value<DeliveryAttemptOutcome?> failureReason =
+                Value<DeliveryAttemptOutcome?> lastAttemptOutcome =
                     const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OrdersCompanion(
@@ -15065,7 +15081,7 @@ class $$OrdersTableTableManager
                 paymentRuleVersion: paymentRuleVersion,
                 attemptCount: attemptCount,
                 deliveredAt: deliveredAt,
-                failureReason: failureReason,
+                lastAttemptOutcome: lastAttemptOutcome,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -15098,7 +15114,7 @@ class $$OrdersTableTableManager
                 Value<int?> paymentRuleVersion = const Value.absent(),
                 Value<int> attemptCount = const Value.absent(),
                 Value<DateTime?> deliveredAt = const Value.absent(),
-                Value<DeliveryAttemptOutcome?> failureReason =
+                Value<DeliveryAttemptOutcome?> lastAttemptOutcome =
                     const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OrdersCompanion.insert(
@@ -15130,7 +15146,7 @@ class $$OrdersTableTableManager
                 paymentRuleVersion: paymentRuleVersion,
                 attemptCount: attemptCount,
                 deliveredAt: deliveredAt,
-                failureReason: failureReason,
+                lastAttemptOutcome: lastAttemptOutcome,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -139,10 +139,22 @@ class Orders extends Table with UuidPrimaryKey, OwnedMutableColumns {
   IntColumn get deliveredAt =>
       integer().map(const UtcMillisecondsConverter()).nullable()();
 
-  /// The outcome of the most recent failed attempt, denormalized from
-  /// `delivery_attempts` so an order list renders without a join. The attempts
-  /// table remains the record; this is a cache of its last row.
-  TextColumn get failureReason => text()
+  /// The outcome of the most recent attempt — **any** attempt, not only a
+  /// failed one. Null means never attempted.
+  ///
+  /// **This is a cache.** `delivery_attempts` is the record; this is a
+  /// denormalization of its most recent row, so an order list renders without a
+  /// join. Nothing derives money from it.
+  ///
+  /// **Written only by the transaction that inserts the attempt**, never set
+  /// independently. That is the EntityStamper argument again: a cache
+  /// maintained by convention drifts out of step with its source, a cache
+  /// maintained by a single write path cannot.
+  ///
+  /// Populated on success as well as failure. A field that is only sometimes
+  /// maintained is worse than one always maintained — a reader has to know
+  /// which case they are in before they can trust it.
+  TextColumn get lastAttemptOutcome => text()
       .map(
         const EnumTextConverter<DeliveryAttemptOutcome>(
           DeliveryAttemptOutcome.values,

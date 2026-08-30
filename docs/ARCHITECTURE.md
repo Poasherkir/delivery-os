@@ -582,7 +582,13 @@ CREATE TABLE orders (
 
   attempt_count     SMALLINT NOT NULL DEFAULT 0,
   delivered_at      TIMESTAMPTZ,
-  failure_reason    TEXT,
+  -- Cache of the most recent delivery_attempts row for this order, whatever
+  -- its outcome; null means never attempted. delivery_attempts is the record.
+  -- Written only by the transaction that inserts the attempt, never set on its
+  -- own: a cache maintained by convention drifts, one maintained by a single
+  -- write path does not. Populated on success too — a field that is only
+  -- sometimes maintained is worse than one always maintained.
+  last_attempt_outcome TEXT,
 
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
