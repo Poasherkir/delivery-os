@@ -10,16 +10,21 @@ import '../../domain/value_objects/customer_risk_flag.dart';
 import '../../domain/value_objects/delivery_attempt_outcome.dart';
 import '../../domain/value_objects/delivery_type.dart';
 import '../../domain/value_objects/geo_confidence.dart';
+import '../../domain/value_objects/ledger_enums.dart';
 import '../../domain/value_objects/payment_method.dart';
 import '../../domain/value_objects/phone_e164.dart';
+import '../../domain/value_objects/route_status.dart';
 import 'conventions/converters.dart';
 import 'tables/batches.dart';
 import 'tables/companies.dart';
 import 'tables/customers.dart';
 import 'tables/delivery.dart';
 import 'tables/geography.dart';
+import 'tables/ledger.dart';
 import 'tables/orders.dart';
 import 'tables/payment_rules.dart';
+import 'tables/routes.dart';
+import 'tables/sync.dart';
 import 'tables/users.dart';
 
 part 'app_database.g.dart';
@@ -43,6 +48,15 @@ part 'app_database.g.dart';
     Orders,
     DeliveryAttempts,
     ProofOfDelivery,
+    Routes,
+    RouteStops,
+    MatrixCache,
+    Expenses,
+    DailySettlements,
+    SettlementAdjustments,
+    Remittances,
+    Outbox,
+    AuditLogs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
