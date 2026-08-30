@@ -20,7 +20,26 @@ hooks:
       source: sqlcipher
 
 dependencies:
-  drift: ^2.34.3
+  # TEMPORARY PIN — remove it when the condition below clears. Not a judgement
+  # about drift, and not a version this project wants to sit on.
+  #
+  # Why: drift 2.34.1+ moves GeneratedDatabase behind a drift3_preview path
+  # that drift_dev 2.34.0's schema tooling cannot compile against, which breaks
+  # `drift_dev schema dump` and with it the whole migration harness. The
+  # drift_dev that matches (2.34.5) needs analyzer ^13. flutter_test pins
+  # test_api 0.7.11, package:test resolves to 1.31, and that combination caps
+  # analyzer at 12. So the real blocker is an analyzer skew in the test
+  # toolchain, not anything in drift — drift is just where it surfaces.
+  #
+  # What releases it: flutter_test's test_api constraint moving far enough to
+  # admit analyzer ^13. To check, drop both pins to ^2.34.0 and run
+  #
+  #     flutter pub get && dart run drift_dev schema dump \
+  #       lib/data/db/app_database.dart drift_schema/
+  #
+  # If that resolves and the dump compiles, delete both pins and this comment.
+  # Until then the migration harness is worth more than three patch versions.
+  drift: 2.34.0
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -37,7 +56,12 @@ dependencies:
 
 dev_dependencies:
   build_runner: ^2.15.1
-  drift_dev: ^2.34.0
+  # TEMPORARY PIN — lifts together with the `drift` pin above, which carries
+  # the reason and the release test. Both must name the same version: a caret
+  # here lets `pub upgrade` move the generator alone onto a drift it cannot
+  # compile against, and that surfaces as the schema tooling breaking rather
+  # than as a version conflict.
+  drift_dev: 2.34.0
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
