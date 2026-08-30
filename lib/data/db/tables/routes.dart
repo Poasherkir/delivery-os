@@ -55,9 +55,31 @@ class Routes extends Table with UuidPrimaryKey, OwnedMutableColumns {
 
 /// One stop on a route, pointing at the order to deliver there.
 ///
+/// **A plan, not an outcome.** This table says which order is visited in what
+/// position, when it is expected, and when the driver actually arrived and
+/// left. What *happened* at the stop belongs to the order, which already holds
+/// it — so there is deliberately no `status` column here. Two copies of one
+/// fact drift apart, which is the same argument that keeps `settled` out of
+/// `OrderStatus`.
+///
+/// Everything a route screen needs is derivable:
+///
+/// * **done** — the order has reached a batch-closing state
+///   (`OrderStatus.closesTheBatch`)
+/// * **current** — [arrivedAt] is set and [departedAt] is not
+/// * **pending** — neither is set
+///
+/// "Skipped" looks route-only and is not persistent either: skipping a stop
+/// triggers re-optimization, re-optimization replaces the stops wholesale, and
+/// the old row is gone. Nothing needs to remember it.
+///
+/// If M4 turns up a genuine route-only state that timestamps cannot express,
+/// adding a typed enum column then is cheap. Carrying an untyped one on the
+/// chance that it might is not.
+///
 /// **Invariant 3's first exception**: `created_at` and `updated_at`, no
 /// `version`, no soft delete, and no `owner_id`. Stops mutate — `arrived_at`,
-/// `status` — but they belong to their route rather than to the driver
+/// `departed_at` — but they belong to their route rather than to the driver
 /// directly, and re-optimization replaces a route's stops wholesale rather than
 /// editing them one by one. A stop that is gone is gone with its route, so
 /// there is nothing to tombstone and no version to reconcile.
@@ -86,18 +108,6 @@ class RouteStops extends Table with UuidPrimaryKey, RouteStopColumns {
 
   IntColumn get departedAt =>
       integer().map(const UtcMillisecondsConverter()).nullable()();
-
-  /// Deliberately plain text, not an enum, and the only such column in the
-  /// schema.
-  ///
-  /// §6.2 gives it a default of `pending` and no vocabulary, and inventing one
-  /// here would be inventing business logic — a stop's states depend on how the
-  /// route screen and the re-optimization triggers actually work, neither of
-  /// which exists yet. The vocabulary is settled in M4 with the route screen,
-  /// and becomes an enum then. Nothing in M0 reads it.
-  TextColumn get status => text()
-      .withLength(min: 1, max: 40)
-      .withDefault(const Constant('pending'))();
 
   /// A driver-locked stop keeps its index through re-optimization (§10.1).
   BoolColumn get isLocked => boolean().withDefault(const Constant(false))();

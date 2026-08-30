@@ -655,7 +655,11 @@ CREATE TABLE route_stops (
   eta            TIMESTAMPTZ,
   arrived_at     TIMESTAMPTZ,
   departed_at    TIMESTAMPTZ,
-  status         TEXT NOT NULL DEFAULT 'pending',
+  -- No status column, deliberately. A stop is a plan; what happened at it
+  -- belongs to the order, which already holds it, and two copies of one fact
+  -- drift. done = the order reached a batch-closing state; current = arrived_at
+  -- set and departed_at not; pending = neither. "Skipped" is not persistent:
+  -- skipping triggers re-optimization, which replaces the stops wholesale.
   is_locked      BOOLEAN NOT NULL DEFAULT false,  -- manual reorder pins it
   UNIQUE (route_id, sequence)
 );

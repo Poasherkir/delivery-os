@@ -9647,20 +9647,6 @@ class $RouteStopsTable extends RouteStops
         type: DriftSqlType.int,
         requiredDuringInsert: false,
       ).withConverter<DateTime?>($RouteStopsTable.$converterdepartedAtn);
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
-  @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-    'status',
-    aliasedName,
-    false,
-    additionalChecks: GeneratedColumn.checkTextLength(
-      minTextLength: 1,
-      maxTextLength: 40,
-    ),
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('pending'),
-  );
   static const VerificationMeta _isLockedMeta = const VerificationMeta(
     'isLocked',
   );
@@ -9689,7 +9675,6 @@ class $RouteStopsTable extends RouteStops
     eta,
     arrivedAt,
     departedAt,
-    status,
     isLocked,
   ];
   @override
@@ -9749,12 +9734,6 @@ class $RouteStopsTable extends RouteStops
           data['leg_duration_s']!,
           _legDurationSMeta,
         ),
-      );
-    }
-    if (data.containsKey('status')) {
-      context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
     if (data.containsKey('is_locked')) {
@@ -9830,10 +9809,6 @@ class $RouteStopsTable extends RouteStops
           data['${effectivePrefix}departed_at'],
         ),
       ),
-      status: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}status'],
-      )!,
       isLocked: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_locked'],
@@ -9882,16 +9857,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
   final DateTime? arrivedAt;
   final DateTime? departedAt;
 
-  /// Deliberately plain text, not an enum, and the only such column in the
-  /// schema.
-  ///
-  /// §6.2 gives it a default of `pending` and no vocabulary, and inventing one
-  /// here would be inventing business logic — a stop's states depend on how the
-  /// route screen and the re-optimization triggers actually work, neither of
-  /// which exists yet. The vocabulary is settled in M4 with the route screen,
-  /// and becomes an enum then. Nothing in M0 reads it.
-  final String status;
-
   /// A driver-locked stop keeps its index through re-optimization (§10.1).
   final bool isLocked;
   const RouteStop({
@@ -9906,7 +9871,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
     this.eta,
     this.arrivedAt,
     this.departedAt,
-    required this.status,
     required this.isLocked,
   });
   @override
@@ -9945,7 +9909,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
         $RouteStopsTable.$converterdepartedAtn.toSql(departedAt),
       );
     }
-    map['status'] = Variable<String>(status);
     map['is_locked'] = Variable<bool>(isLocked);
     return map;
   }
@@ -9971,7 +9934,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
       departedAt: departedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(departedAt),
-      status: Value(status),
       isLocked: Value(isLocked),
     );
   }
@@ -9993,7 +9955,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
       eta: serializer.fromJson<DateTime?>(json['eta']),
       arrivedAt: serializer.fromJson<DateTime?>(json['arrivedAt']),
       departedAt: serializer.fromJson<DateTime?>(json['departedAt']),
-      status: serializer.fromJson<String>(json['status']),
       isLocked: serializer.fromJson<bool>(json['isLocked']),
     );
   }
@@ -10012,7 +9973,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
       'eta': serializer.toJson<DateTime?>(eta),
       'arrivedAt': serializer.toJson<DateTime?>(arrivedAt),
       'departedAt': serializer.toJson<DateTime?>(departedAt),
-      'status': serializer.toJson<String>(status),
       'isLocked': serializer.toJson<bool>(isLocked),
     };
   }
@@ -10029,7 +9989,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
     Value<DateTime?> eta = const Value.absent(),
     Value<DateTime?> arrivedAt = const Value.absent(),
     Value<DateTime?> departedAt = const Value.absent(),
-    String? status,
     bool? isLocked,
   }) => RouteStop(
     id: id ?? this.id,
@@ -10043,7 +10002,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
     eta: eta.present ? eta.value : this.eta,
     arrivedAt: arrivedAt.present ? arrivedAt.value : this.arrivedAt,
     departedAt: departedAt.present ? departedAt.value : this.departedAt,
-    status: status ?? this.status,
     isLocked: isLocked ?? this.isLocked,
   );
   RouteStop copyWithCompanion(RouteStopsCompanion data) {
@@ -10065,7 +10023,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
       departedAt: data.departedAt.present
           ? data.departedAt.value
           : this.departedAt,
-      status: data.status.present ? data.status.value : this.status,
       isLocked: data.isLocked.present ? data.isLocked.value : this.isLocked,
     );
   }
@@ -10084,7 +10041,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
           ..write('eta: $eta, ')
           ..write('arrivedAt: $arrivedAt, ')
           ..write('departedAt: $departedAt, ')
-          ..write('status: $status, ')
           ..write('isLocked: $isLocked')
           ..write(')'))
         .toString();
@@ -10103,7 +10059,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
     eta,
     arrivedAt,
     departedAt,
-    status,
     isLocked,
   );
   @override
@@ -10121,7 +10076,6 @@ class RouteStop extends DataClass implements Insertable<RouteStop> {
           other.eta == this.eta &&
           other.arrivedAt == this.arrivedAt &&
           other.departedAt == this.departedAt &&
-          other.status == this.status &&
           other.isLocked == this.isLocked);
 }
 
@@ -10137,7 +10091,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
   final Value<DateTime?> eta;
   final Value<DateTime?> arrivedAt;
   final Value<DateTime?> departedAt;
-  final Value<String> status;
   final Value<bool> isLocked;
   final Value<int> rowid;
   const RouteStopsCompanion({
@@ -10152,7 +10105,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
     this.eta = const Value.absent(),
     this.arrivedAt = const Value.absent(),
     this.departedAt = const Value.absent(),
-    this.status = const Value.absent(),
     this.isLocked = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -10168,7 +10120,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
     this.eta = const Value.absent(),
     this.arrivedAt = const Value.absent(),
     this.departedAt = const Value.absent(),
-    this.status = const Value.absent(),
     this.isLocked = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -10189,7 +10140,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
     Expression<int>? eta,
     Expression<int>? arrivedAt,
     Expression<int>? departedAt,
-    Expression<String>? status,
     Expression<bool>? isLocked,
     Expression<int>? rowid,
   }) {
@@ -10205,7 +10155,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
       if (eta != null) 'eta': eta,
       if (arrivedAt != null) 'arrived_at': arrivedAt,
       if (departedAt != null) 'departed_at': departedAt,
-      if (status != null) 'status': status,
       if (isLocked != null) 'is_locked': isLocked,
       if (rowid != null) 'rowid': rowid,
     });
@@ -10223,7 +10172,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
     Value<DateTime?>? eta,
     Value<DateTime?>? arrivedAt,
     Value<DateTime?>? departedAt,
-    Value<String>? status,
     Value<bool>? isLocked,
     Value<int>? rowid,
   }) {
@@ -10239,7 +10187,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
       eta: eta ?? this.eta,
       arrivedAt: arrivedAt ?? this.arrivedAt,
       departedAt: departedAt ?? this.departedAt,
-      status: status ?? this.status,
       isLocked: isLocked ?? this.isLocked,
       rowid: rowid ?? this.rowid,
     );
@@ -10291,9 +10238,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
         $RouteStopsTable.$converterdepartedAtn.toSql(departedAt.value),
       );
     }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
-    }
     if (isLocked.present) {
       map['is_locked'] = Variable<bool>(isLocked.value);
     }
@@ -10317,7 +10261,6 @@ class RouteStopsCompanion extends UpdateCompanion<RouteStop> {
           ..write('eta: $eta, ')
           ..write('arrivedAt: $arrivedAt, ')
           ..write('departedAt: $departedAt, ')
-          ..write('status: $status, ')
           ..write('isLocked: $isLocked, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -24562,7 +24505,6 @@ typedef $$RouteStopsTableCreateCompanionBuilder =
       Value<DateTime?> eta,
       Value<DateTime?> arrivedAt,
       Value<DateTime?> departedAt,
-      Value<String> status,
       Value<bool> isLocked,
       Value<int> rowid,
     });
@@ -24579,7 +24521,6 @@ typedef $$RouteStopsTableUpdateCompanionBuilder =
       Value<DateTime?> eta,
       Value<DateTime?> arrivedAt,
       Value<DateTime?> departedAt,
-      Value<String> status,
       Value<bool> isLocked,
       Value<int> rowid,
     });
@@ -24681,11 +24622,6 @@ class $$RouteStopsTableFilterComposer
         column: $table.departedAt,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
-
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
-    builder: (column) => ColumnFilters(column),
-  );
 
   ColumnFilters<bool> get isLocked => $composableBuilder(
     column: $table.isLocked,
@@ -24793,11 +24729,6 @@ class $$RouteStopsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get isLocked => $composableBuilder(
     column: $table.isLocked,
     builder: (column) => ColumnOrderings(column),
@@ -24893,9 +24824,6 @@ class $$RouteStopsTableAnnotationComposer
         builder: (column) => column,
       );
 
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
-
   GeneratedColumn<bool> get isLocked =>
       $composableBuilder(column: $table.isLocked, builder: (column) => column);
 
@@ -24985,7 +24913,6 @@ class $$RouteStopsTableTableManager
                 Value<DateTime?> eta = const Value.absent(),
                 Value<DateTime?> arrivedAt = const Value.absent(),
                 Value<DateTime?> departedAt = const Value.absent(),
-                Value<String> status = const Value.absent(),
                 Value<bool> isLocked = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RouteStopsCompanion(
@@ -25000,7 +24927,6 @@ class $$RouteStopsTableTableManager
                 eta: eta,
                 arrivedAt: arrivedAt,
                 departedAt: departedAt,
-                status: status,
                 isLocked: isLocked,
                 rowid: rowid,
               ),
@@ -25017,7 +24943,6 @@ class $$RouteStopsTableTableManager
                 Value<DateTime?> eta = const Value.absent(),
                 Value<DateTime?> arrivedAt = const Value.absent(),
                 Value<DateTime?> departedAt = const Value.absent(),
-                Value<String> status = const Value.absent(),
                 Value<bool> isLocked = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RouteStopsCompanion.insert(
@@ -25032,7 +24957,6 @@ class $$RouteStopsTableTableManager
                 eta: eta,
                 arrivedAt: arrivedAt,
                 departedAt: departedAt,
-                status: status,
                 isLocked: isLocked,
                 rowid: rowid,
               ),
