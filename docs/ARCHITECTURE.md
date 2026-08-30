@@ -366,7 +366,8 @@ Written as Postgres + PostGIS (the V2 target). The Drift schema for MVP is the s
 ### 6.1 Conventions
 
 - Primary keys are **UUIDv7**, generated client-side. This is non-negotiable: offline creation needs stable IDs and UUIDv7 keeps them time-sortable for index locality.
-- **Which audit columns a table carries depends on its category** — owned mutable entity, append-only record, bundled reference data, or purgeable cache. The four categories and the two deliberate exceptions (`route_stops`, `users`) are the table in `CLAUDE.md` invariant 3. Not every table carries all five.
+- **Which audit columns a table carries depends on its category** — owned mutable entity, append-only record, bundled reference data, purgeable cache, or local machinery. The five categories and the two deliberate exceptions (`route_stops`, `users`) are the table in `CLAUDE.md` invariant 3. Not every table carries all five.
+- **`outbox` is local machinery, not an append-only record.** It mutates: `attempts`, `last_error` and `synced_at` are all written during a sync pass. But it is not an owned entity either — it never syncs, it has no `version`, and tombstoning a queue row is meaningless. Synced rows are hard-deleted or trimmed by age.
 - `version` increments on **every** write, including a soft delete. It is never left to a DAO to remember: `EntityStamper` produces the stamp and a guard fails the build on a write that bypasses it.
 - All money is `BIGINT` in **centimes**. Never numeric, never float.
 - Timestamps are `TIMESTAMPTZ`, always UTC. Business day is a separate `DATE` column (`service_date`) because a delivery at 00:30 belongs to the previous working day. Algeria is UTC+1 year-round with no DST, so that is a fixed offset rather than a timezone-database problem; only the cutoff hour is open.

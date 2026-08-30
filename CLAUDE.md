@@ -40,9 +40,10 @@ Violating any of these is a bug, even if the code compiles and tests pass.
    | Category | Tables | Columns |
    |---|---|---|
    | **Owned mutable entity** | `companies`, `customers`, `customer_addresses`, `batches`, `orders`, `expenses`, `remittances`, `routes` | All five. Soft delete. `version` incremented on every write. |
-   | **Append-only / immutable record** | `payment_rules`, `delivery_attempts`, `proof_of_delivery`, `daily_settlements`, `settlement_adjustments`, `audit_logs`, `outbox` | `owner_id` + `created_at` only. These rows are never updated, so `updated_at` and `version` would be lies and a soft delete would be a rewrite of history. |
+   | **Append-only / immutable record** | `payment_rules`, `delivery_attempts`, `proof_of_delivery`, `daily_settlements`, `settlement_adjustments`, `audit_logs` | `owner_id` + `created_at` only. These rows are never updated, so `updated_at` and `version` would be lies and a soft delete would be a rewrite of history. |
    | **Bundled reference data** | `wilayas`, `communes` | None. Ships inside the APK, is not user data, never syncs. |
    | **Pure local cache** | `matrix_cache` | None — not even `owner_id`. **Purgeable:** droppable at any moment with zero data loss, and it must *never* sync. It is not a record of anything. |
+   | **Local machinery** | `outbox` | `created_at` plus whatever mutable state the mechanism needs. No `version`, no soft delete, and **hard deletion is allowed** — a synced row is removed or trimmed by age, not tombstoned. It mutates (`attempts`, `last_error`, `synced_at`) but it is not an owned entity and it never syncs. |
 
    Two exceptions, both deliberate:
 
