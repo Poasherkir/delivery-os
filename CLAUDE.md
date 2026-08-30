@@ -148,6 +148,11 @@ being asked.
   editor, unreviewable in a diff, and silently mangled by a copy-paste. Write
   `String.fromCharCode(0x200E)`, not the character. Prose in comments is exempt;
   string literals are not.
+- **Write files with the Write tool, never a shell heredoc.** A heredoc mangles
+  content under quoting — three times in M0, once writing a broken escape
+  silently into a source file that only the analyzer caught. A tool that
+  corrupts content under quoting is not a tool for content. Shell is for
+  commands.
 - **Never `git add -A`. Stage explicitly, by path.** A blanket stage lets one
   commit silently swallow another concern's work — a docs commit absorbing a
   whole task's implementation — which defeats the point of splitting commits by
