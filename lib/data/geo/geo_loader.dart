@@ -46,8 +46,32 @@ final class GeoLoader {
   /// Idempotent: loading the same dataset twice leaves the same table. A row
   /// that was retired and reappears in a later dataset comes back un-retired,
   /// which falls out of the upsert rather than needing its own pass.
+  ///
+  /// **Retire everything, then un-retire what the dataset lists.** The obvious
+  /// shape — "retire the rows whose key is not in this list" — needs the whole
+  /// key set inside the statement, and there is no good way to put it there.
+  /// Binding roughly 1541 commune ids runs into `SQLITE_MAX_VARIABLE_NUMBER`,
+  /// which is 999 on some builds, so it would pass against a small fixture and
+  /// fail on the real dataset. Interpolating them as literals avoids that and
+  /// introduces a worse habit: string-built SQL that is safe here only because
+  /// these particular values happen to be parsed integers.
+  ///
+  /// A blanket `UPDATE ... SET is_retired = 1` takes no parameters at all, and
+  /// the upserts that follow restore every current row. The transaction is what
+  /// makes the intermediate state safe — there is no moment any reader can
+  /// observe in which everything is retired.
   Future<GeoLoadReport> load(GeoDataset dataset) {
     return _db.transaction(() async {
+      // Captured before anything moves, so the report can say what this load
+      // actually retired rather than what the table happens to hold. Counting
+      // retired rows before and after would go wrong the moment a load
+      // un-retires something.
+      final Set<int> wilayasLiveBefore = await _liveKeys('wilayas', 'code');
+      final Set<int> communesLiveBefore = await _liveKeys('communes', 'id');
+
+      await _retireAll('wilayas');
+      await _retireAll('communes');
+
       for (final WilayaRecord w in dataset.wilayas) {
         await _db
             .into(_db.wilayas)
@@ -84,54 +108,34 @@ final class GeoLoader {
             );
       }
 
-      final int wilayasRetired = await _retire(
-        table: 'wilayas',
-        keyColumn: 'code',
-        keep: <int>[for (final WilayaRecord w in dataset.wilayas) w.code],
-      );
-      final int communesRetired = await _retire(
-        table: 'communes',
-        keyColumn: 'id',
-        keep: <int>[for (final CommuneRecord c in dataset.communes) c.id],
-      );
+      // Whatever was live before and is not live now was retired by this load.
+      final Set<int> wilayasLiveAfter = await _liveKeys('wilayas', 'code');
+      final Set<int> communesLiveAfter = await _liveKeys('communes', 'id');
 
       return GeoLoadReport(
         wilayasWritten: dataset.wilayas.length,
         communesWritten: dataset.communes.length,
-        wilayasRetired: wilayasRetired,
-        communesRetired: communesRetired,
+        wilayasRetired: wilayasLiveBefore.difference(wilayasLiveAfter).length,
+        communesRetired: communesLiveBefore
+            .difference(communesLiveAfter)
+            .length,
       );
     });
   }
 
-  /// Marks every row outside [keep] retired, and returns how many changed.
+  /// Marks every row in [table] retired. No parameters, nothing interpolated.
   ///
-  /// The key list is inlined as literals rather than bound as variables on
-  /// purpose. `SQLITE_MAX_VARIABLE_NUMBER` is 999 on some builds and there are
-  /// roughly 1541 communes, so binding them would work in tests against a small
-  /// fixture and fail on the real dataset — the worst possible place to find
-  /// out. These are integers parsed by `GeoDataset`, never raw file text, so
-  /// there is nothing to inject.
-  Future<int> _retire({
-    required String table,
-    required String keyColumn,
-    required List<int> keep,
-  }) async {
-    if (keep.isEmpty) {
-      // GeoDataset rejects an empty list at parse time, so this is
-      // unreachable — and it stays here because the alternative is emitting
-      // `NOT IN ()`, which is a syntax error in the best case and a table-wide
-      // retirement in the worst.
-      return 0;
-    }
+  /// [table] is one of two literals chosen in this file, never anything that
+  /// came from a dataset.
+  Future<void> _retireAll(String table) => _db.customStatement(
+    'UPDATE $table SET is_retired = 1 WHERE is_retired = 0',
+  );
 
-    final String keys = keep.join(',');
-    return _db.customUpdate(
-      'UPDATE $table SET is_retired = 1 '
-      'WHERE is_retired = 0 AND $keyColumn NOT IN ($keys)',
-      updates: <TableInfo<Table, Object?>>{
-        if (table == 'wilayas') _db.wilayas else _db.communes,
-      },
-    );
+  /// The keys of every row not currently retired.
+  Future<Set<int>> _liveKeys(String table, String keyColumn) async {
+    final List<QueryRow> rows = await _db
+        .customSelect('SELECT $keyColumn AS k FROM $table WHERE is_retired = 0')
+        .get();
+    return <int>{for (final QueryRow row in rows) row.read<int>('k')};
   }
 }

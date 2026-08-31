@@ -299,6 +299,41 @@ void main() {
     expect(row.read<int>('is_retired'), 1);
   });
 
+  test('a dataset larger than the SQL variable limit loads', () async {
+    // SQLITE_MAX_VARIABLE_NUMBER is 999 on some builds and Algeria has roughly
+    // 1541 communes, so any shape that puts the key set inside a statement
+    // passes against a small fixture and fails on the real file. 1200 rows is
+    // past the limit and under the real count.
+    final List<Map<String, Object?>> many = <Map<String, Object?>>[
+      for (int i = 0; i < 1200; i++)
+        <String, Object?>{
+          'id': 160000 + i,
+          'wilaya': 16,
+          'name_fr': 'Commune $i',
+          'name_ar': 'بلدية $i',
+        },
+    ];
+
+    final GeoLoadReport report = await loader.load(
+      _dataset(
+        editCommunes: (List<Map<String, Object?>> rows) {
+          rows
+            ..clear()
+            ..addAll(many);
+        },
+      ),
+    );
+
+    expect(report.communesWritten, 1200);
+    expect(await communes(), hasLength(1200));
+
+    // And retiring that many works too, which is the half the old shape would
+    // have broken.
+    final GeoLoadReport second = await loader.load(_dataset(version: 'v2'));
+    expect(second.communesRetired, 1200);
+    expect(await communes(), hasLength(1204), reason: 'nothing may be deleted');
+  });
+
   test('the load is one transaction', () async {
     // A commune whose wilaya vanishes mid-load would violate the foreign key.
     // Either the whole dataset lands or none of it does — a half-loaded

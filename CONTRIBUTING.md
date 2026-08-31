@@ -144,6 +144,13 @@ being asked.
   (`flutter analyze`, `flutter test`, `dart format --set-exit-if-changed`,
   `flutter build`) run bare, with their full output shown. If a pipe is
   genuinely unavoidable, `set -o pipefail` first and echo the real exit code.
+- **Formatting and checking are two different commands. Never conflate them.**
+  `dart format .` *writes*. `dart format --output=none --set-exit-if-changed .`
+  *checks* and writes nothing. Running the check and believing you have
+  formatted leaves unformatted files in a commit that then fails CI — which is
+  exactly what happened at M0-22, where a pre-commit "format" was `--output=none`
+  and therefore a no-op on disk. Same class of error as piping a gate: a
+  verification step that silently does nothing.
 - **Control and invisible characters are built from codepoints, never pasted.**
   Bidi marks, zero-width characters, BOMs and the like are invisible in an
   editor, unreviewable in a diff, and silently mangled by a copy-paste. Write
