@@ -1593,6 +1593,30 @@ Ranked by how much they differentiate against everything else in this market.
 
 ### Week 2–3 (M1)
 
+**M1-00 — wire startup. This goes first, before any feature work.**
+
+M0 built the bootstrap and the locale reconciliation and left them behind a
+provider that nothing calls. That was deliberate: the missing piece is a
+*screen*, and the screen needs copy, localized strings, a retry affordance and a
+destructive-confirm flow — four UI decisions that belong with M1's real screens
+rather than invented at the end of a foundations milestone.
+
+What M1-00 owes:
+
+- open the encrypted database at startup, after the first frame, so the UI
+  exists before an open that can fail
+- run `AppBootstrap.ensureUser`, then `LocaleController.reconcile`
+- override `userSettingsProvider` once the database is up, so language changes
+  reach the source of truth instead of preferences alone
+- render the unreadable-database screen on `DatabaseUnreadableException` and
+  `DatabaseKeyMissingError` — in a language the driver reads, which is the
+  entire reason the preferences cache exists
+- offer the destructive reset (delete the database, regenerate the key) behind
+  an explicit confirmation, and never automatically
+
+Until this lands, bootstrap never runs on a real device. It is named here so it
+cannot fall between milestones.
+
 12. Barcode scanner screen. Scan → order draft → confirm.
 13. Order entry form, phone field first, live customer lookup by normalized phone.
 14. Duplicate handling: show the existing customer with order count, one tap to reuse.
