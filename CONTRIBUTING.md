@@ -191,6 +191,18 @@ when the first integration test exists, and not before.
 
 ## Testing bar
 
+- **A test that would pass against an empty implementation is not a test.**
+  Before writing the assertion, ask what it would do if the thing under test did
+  nothing at all. Three have been caught this way already: a widget test that
+  replaced the whole tree with a `SizedBox` and asserted no exception, an Arabic
+  test that compared a title against the string `'fr'`, and a money test whose
+  expected value came from the same reasoning as the implementation.
+
+  **Where it is cheap, prove the test by breaking the thing it guards.** Plant a
+  real violation, watch the test fail, revert, confirm no residue. That is how
+  the schema-divergence guard and the database-first write ordering were
+  verified, and both of them found the failure message was as good as the
+  failure. A guard that has never failed is a guard nobody has tested.
 - `lib/domain/` requires **90%+ coverage**. It is pure and fast; there is no
   excuse.
 - The money engine needs property tests, not just examples. Invariants that must

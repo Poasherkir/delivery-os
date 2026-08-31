@@ -49,7 +49,9 @@ void main() {
           clockProvider.overrideWithValue(
             FixedClock(DateTime.utc(2026, 8, 31)),
           ),
-          databaseOpenerProvider.overrideWithValue(opener),
+          databaseAccessProvider.overrideWithValue(
+            DatabaseAccess(open: opener),
+          ),
         ],
         child: MediaQuery(
           data: MediaQueryData(textScaler: TextScaler.linear(textScale)),

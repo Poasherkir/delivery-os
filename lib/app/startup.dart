@@ -47,11 +47,15 @@ final class StartupResult {
 /// Takes [openExecutor] as a function rather than a database, because opening
 /// is the part that reaches for `path_provider` and the platform keystore.
 /// Injecting it keeps every decision this function makes testable on the host.
+/// [verifyAfterWrite] runs once the database exists on disk with a row in it,
+/// which is the earliest moment anything can be checked *about the file*. On
+/// device it asserts the file is actually encrypted; in tests it is absent.
 Future<StartupResult> runStartup({
   required Future<QueryExecutor> Function() openExecutor,
   required DeviceIdStore deviceIds,
   required Clock clock,
   required UuidV7Generator uuid,
+  Future<void> Function()? verifyAfterWrite,
 }) async {
   // First, and deliberately not inside the database transaction. The device id
   // lives in preferences precisely so it survives a database that will not
@@ -65,6 +69,12 @@ Future<StartupResult> runStartup({
   // the resolved device locale here would record a choice the driver never
   // made — see `AppBootstrap.ensureUser`.
   final User user = await AppBootstrap(database, clock, uuid).ensureUser();
+
+  // After the first write, never before it. Drift opens lazily, so until a row
+  // is on disk there may be no file to inspect at all — and a check that runs
+  // too early would silently pass on a file that does not exist yet, which is
+  // the shape of a test that guards nothing.
+  await verifyAfterWrite?.call();
 
   return StartupResult(database: database, deviceId: deviceId, user: user);
 }

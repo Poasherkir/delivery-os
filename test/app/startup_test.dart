@@ -6,6 +6,7 @@ import 'package:delivery_os/core/device/device_id_store.dart';
 import 'package:delivery_os/core/l10n/app_locales.dart';
 import 'package:delivery_os/core/l10n/locale_controller.dart';
 import 'package:delivery_os/core/time/clock.dart';
+import 'package:delivery_os/core/utils/uuid_v7.dart';
 import 'package:delivery_os/data/db/encryption/database_key.dart';
 import 'package:delivery_os/domain/repositories/user_settings.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
@@ -42,10 +43,14 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         clockProvider.overrideWithValue(clock),
-        databaseOpenerProvider.overrideWithValue(
-          opener ??
-              () async =>
-                  file == null ? NativeDatabase.memory() : NativeDatabase(file),
+        databaseAccessProvider.overrideWithValue(
+          DatabaseAccess(
+            open:
+                opener ??
+                () async => file == null
+                    ? NativeDatabase.memory()
+                    : NativeDatabase(file),
+          ),
         ),
       ],
     );
@@ -106,6 +111,61 @@ void main() {
 
       expect(b.user.id, a.user.id, reason: 'the owner id must be stable');
       expect(b.deviceId, a.deviceId, reason: 'the device id must be stable');
+    });
+  });
+
+  group('the after-write verification hook', () {
+    // On device this asserts the file is really encrypted — the one part of
+    // encryption the host tests cannot reach, since they use a fake key store.
+    // What is testable here is that it runs, and that it runs late enough to
+    // have something to look at.
+
+    test('runs only once the file exists and has been written', () async {
+      // The ordering is the whole point, and this asserts it the same way the
+      // device hook does: by looking at the file. Drift opens lazily, so a
+      // check called before the first write would inspect a file that does not
+      // exist yet and pass — a guard that guards nothing.
+      final Directory dir = Directory.systemTemp.createTempSync('verify_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final File file = File('${dir.path}/app.db');
+
+      bool? existedAtVerify;
+      int sizeAtVerify = 0;
+
+      final StartupResult r = await runStartup(
+        openExecutor: () async => NativeDatabase(file),
+        deviceIds: DeviceIdStore(
+          await _prefs(),
+          UuidV7Generator(clock: FixedClock.epoch()),
+        ),
+        clock: FixedClock.epoch(),
+        uuid: UuidV7Generator(clock: FixedClock.epoch()),
+        verifyAfterWrite: () async {
+          existedAtVerify = file.existsSync();
+          sizeAtVerify = existedAtVerify! ? file.lengthSync() : 0;
+        },
+      );
+      addTearDown(r.database.close);
+
+      expect(existedAtVerify, isTrue, reason: 'the hook ran before the open');
+      expect(sizeAtVerify, greaterThan(0));
+    });
+
+    test('a failing verification fails startup', () async {
+      await expectLater(
+        runStartup(
+          openExecutor: () async => NativeDatabase.memory(),
+          deviceIds: DeviceIdStore(
+            await _prefs(),
+            UuidV7Generator(clock: FixedClock.epoch()),
+          ),
+          clock: FixedClock.epoch(),
+          uuid: UuidV7Generator(clock: FixedClock.epoch()),
+          verifyAfterWrite: () async =>
+              throw StateError('plaintext header on disk'),
+        ),
+        throwsA(isA<StateError>()),
+      );
     });
   });
 
@@ -252,3 +312,8 @@ File _tempDb() {
 
 Future<QueryExecutor> refuseOpener() =>
     Future<QueryExecutor>.error(DatabaseKeyMissingError());
+
+Future<SharedPreferences> _prefs() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  return SharedPreferences.getInstance();
+}
