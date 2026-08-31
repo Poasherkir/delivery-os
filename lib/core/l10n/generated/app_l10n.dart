@@ -168,6 +168,54 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Paramètres'**
   String get navSettings;
+
+  /// Title of the screen shown when the encrypted database cannot be opened. States the fact, never the cause: a keystore wipe, a device restore, a corrupted file and an OEM security reset all arrive as the same exception, and a guessed cause sends the driver off to fix something that is not broken. Never names encryption, keys or databases — that is our vocabulary, not his.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir vos données'**
+  String get dbErrorTitle;
+
+  /// The most important string on this screen, and the reason it is long. It is the difference between a driver who continues his day and one who stops. Three jobs: the parcels in his hand are still real, the company still holds its own record of the batch, and what was lost is the app's copy of the history rather than his work or his money. Do not shorten by dropping a clause; split into more sentences instead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos colis et le travail d\'aujourd\'hui ne sont pas perdus. L\'entreprise garde sa propre trace du lot. Ce qui manque, c\'est la copie de l\'application — pas votre argent.'**
+  String get dbErrorStillTrue;
+
+  /// Emphasised, and deliberately NOT a numbered troubleshooting step. It fixes nothing, so listing it after 'retry' would read as what you do once the other steps fail. It is what the driver does first, and it stays true even if retry succeeds: if his money records are gone, the company's bordereau is the surviving source.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avant toute autre chose, comparez l\'argent encaissé aujourd\'hui avec le bordereau de l\'entreprise.'**
+  String get dbErrorReconcile;
+
+  /// First troubleshooting step. Least destructive first.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayez.'**
+  String get dbErrorStep1;
+
+  /// Second troubleshooting step.
+  ///
+  /// In fr, this message translates to:
+  /// **'Redémarrez le téléphone, puis réessayez.'**
+  String get dbErrorStep2;
+
+  /// The only action visible at first view. Re-attempts the database open, which is worth keeping because a transient keystore failure can clear on relaunch — the one case where this screen is recoverable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get dbErrorRetry;
+
+  /// Expands the secondary disclosure below.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pourquoi ?'**
+  String get dbErrorWhyLabel;
+
+  /// Phrased as 'this can happen after', never 'this happened because'. We cannot determine the cause, and a wrong explanation on the worst day costs more trust than no explanation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cela peut arriver après la restauration d\'un téléphone depuis une sauvegarde, ou après le passage à un nouvel appareil : les données peuvent être copiées, mais pas ce qui permet de les ouvrir.'**
+  String get dbErrorWhyBody;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

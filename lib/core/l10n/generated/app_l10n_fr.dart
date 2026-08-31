@@ -43,4 +43,31 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get navSettings => 'Paramètres';
+
+  @override
+  String get dbErrorTitle => 'Impossible d\'ouvrir vos données';
+
+  @override
+  String get dbErrorStillTrue =>
+      'Vos colis et le travail d\'aujourd\'hui ne sont pas perdus. L\'entreprise garde sa propre trace du lot. Ce qui manque, c\'est la copie de l\'application — pas votre argent.';
+
+  @override
+  String get dbErrorReconcile =>
+      'Avant toute autre chose, comparez l\'argent encaissé aujourd\'hui avec le bordereau de l\'entreprise.';
+
+  @override
+  String get dbErrorStep1 => 'Réessayez.';
+
+  @override
+  String get dbErrorStep2 => 'Redémarrez le téléphone, puis réessayez.';
+
+  @override
+  String get dbErrorRetry => 'Réessayer';
+
+  @override
+  String get dbErrorWhyLabel => 'Pourquoi ?';
+
+  @override
+  String get dbErrorWhyBody =>
+      'Cela peut arriver après la restauration d\'un téléphone depuis une sauvegarde, ou après le passage à un nouvel appareil : les données peuvent être copiées, mais pas ce qui permet de les ouvrir.';
 }

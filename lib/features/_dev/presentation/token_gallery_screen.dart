@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/l10n/locale_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens/tokens.dart';
 import '../../../shared/widgets/app_text.dart';
+import '../../startup/presentation/database_error_screen.dart';
 
 /// Live gallery of every design token.
 ///
@@ -74,6 +76,7 @@ class _TokenGalleryScreenState extends ConsumerState<TokenGalleryScreen> {
               _ElevationSection(colors: colors),
               _ConfidenceSection(colors: colors),
               _MotionSection(colors: colors),
+              _ScreensSection(colors: colors),
             ],
           ),
         ),
@@ -178,6 +181,52 @@ class _TokenGalleryScreenState extends ConsumerState<TokenGalleryScreen> {
 }
 
 // ---------------------------------------------------------------------------
+
+/// Screens that are otherwise unreachable without breaking something.
+///
+/// The unreadable-database screen normally requires a database that will not
+/// open, so reviewing its copy on a real device would mean deliberately
+/// corrupting one. This is how it gets read at 14sp in daylight instead —
+/// which is not the same as looking right in a draft.
+class _ScreensSection extends StatelessWidget {
+  const _ScreensSection({required this.colors});
+
+  final ColorTokens colors;
+
+  @override
+  Widget build(BuildContext context) => _Section(
+    title: 'Screens',
+    colors: colors,
+    child: InkWell(
+      key: const Key('dev.gallery.dbError'),
+      onTap: () => context.push(DatabaseErrorScreen.path),
+      child: Padding(
+        // 48dp target from padding, like every other tappable thing here.
+        padding: const EdgeInsets.symmetric(vertical: SpaceTokens.space12),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.lock_outline, color: colors.textSecondary),
+            const SizedBox(width: SpaceTokens.space12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const AppText('Unreadable database', AppTextStyle.body),
+                  AppText(
+                    'The failure screen, with real copy',
+                    AppTextStyle.caption,
+                    color: colors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: colors.textDisabled),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 class _Section extends StatelessWidget {
   const _Section({

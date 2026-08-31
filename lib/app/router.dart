@@ -13,6 +13,7 @@ import '../features/more/presentation/more_screen.dart';
 import '../features/orders/presentation/orders_screen.dart';
 import '../features/route/presentation/route_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/startup/presentation/database_error_screen.dart';
 import 'app_shell.dart';
 import 'routes.dart';
 
@@ -61,6 +62,17 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
           path: TokenGalleryScreen.path,
           builder: (BuildContext context, GoRouterState state) =>
               const TokenGalleryScreen(),
+        ),
+
+      // Also debug only. The unreadable-database screen is normally reachable
+      // only by a database that will not open, so reviewing its copy on a real
+      // device would otherwise mean deliberately corrupting one. This is the
+      // route that lets it be read at 14sp in daylight instead.
+      if (kDebugMode)
+        GoRoute(
+          path: DatabaseErrorScreen.path,
+          builder: (BuildContext context, GoRouterState state) =>
+              const DatabaseErrorScreen(),
         ),
     ],
   );
