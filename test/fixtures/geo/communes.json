@@ -1,0 +1,41 @@
+{
+  "version": "fixture-1",
+  "communes": [
+    {
+      "id": 1601,
+      "wilaya": 16,
+      "name_fr": "Bab Ezzouar",
+      "name_ar": "باب الزوار",
+      "lat": 36.7167,
+      "lon": 3.1833,
+      "boundary": {
+        "type": "Polygon",
+        "coordinates": [
+          [[3.17, 36.71], [3.20, 36.71], [3.20, 36.73], [3.17, 36.73], [3.17, 36.71]]
+        ]
+      }
+    },
+    {
+      "id": 1605,
+      "wilaya": 16,
+      "name_fr": "Hussein Dey",
+      "name_ar": "حسين داي",
+      "lat": 36.7406,
+      "lon": 3.0947
+    },
+    {
+      "id": 3101,
+      "wilaya": 31,
+      "name_fr": "Oran",
+      "name_ar": "وهران",
+      "lat": 35.6971,
+      "lon": -0.6308
+    },
+    {
+      "id": 101,
+      "wilaya": 1,
+      "name_fr": "Adrar",
+      "name_ar": "أدرار"
+    }
+  ]
+}

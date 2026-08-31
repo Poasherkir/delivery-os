@@ -1,0 +1,24 @@
+{
+  "version": "fixture-1",
+  "wilayas": [
+    {
+      "code": 16,
+      "name_fr": "Alger",
+      "name_ar": "الجزائر",
+      "lat": 36.7538,
+      "lon": 3.0588
+    },
+    {
+      "code": 31,
+      "name_fr": "Oran",
+      "name_ar": "وهران",
+      "lat": 35.6971,
+      "lon": -0.6308
+    },
+    {
+      "code": 1,
+      "name_fr": "Adrar",
+      "name_ar": "أدرار"
+    }
+  ]
+}
