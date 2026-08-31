@@ -181,7 +181,7 @@ abstract class AppL10n {
   /// **'Vos colis et le travail d\'aujourd\'hui ne sont pas perdus. L\'entreprise garde sa propre trace du lot. Ce qui manque, c\'est la copie de l\'application — pas votre argent.'**
   String get dbErrorStillTrue;
 
-  /// Emphasised, and deliberately NOT a numbered troubleshooting step. It fixes nothing, so listing it after 'retry' would read as what you do once the other steps fail. It is what the driver does first, and it stays true even if retry succeeds: if his money records are gone, the company's bordereau is the surviving source.
+  /// TODO(bordereau): the Arabic rendering of "bordereau" is unresolved. Shipping as وصل الشركة, which is understandable and safe, but this is trade vocabulary and belongs to a real manifest rather than to a guess. If drivers say البوردورو, that is the answer. Resolved by the same trip that settles the wilaya structure and the failure-reason taxonomy. Emphasised, and deliberately NOT a numbered troubleshooting step. It fixes nothing, so listing it after 'retry' would read as what you do once the other steps fail. It is what the driver does first, and it stays true even if retry succeeds: if his money records are gone, the company's bordereau is the surviving source.
   ///
   /// In fr, this message translates to:
   /// **'Avant toute autre chose, comparez l\'argent encaissé aujourd\'hui avec le bordereau de l\'entreprise.'**

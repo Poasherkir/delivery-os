@@ -58,7 +58,7 @@
   },
   "dbErrorReconcile": "Avant toute autre chose, comparez l'argent encaissé aujourd'hui avec le bordereau de l'entreprise.",
   "@dbErrorReconcile": {
-    "description": "Emphasised, and deliberately NOT a numbered troubleshooting step. It fixes nothing, so listing it after 'retry' would read as what you do once the other steps fail. It is what the driver does first, and it stays true even if retry succeeds: if his money records are gone, the company's bordereau is the surviving source."
+    "description": "TODO(bordereau): the Arabic rendering of \"bordereau\" is unresolved. Shipping as وصل الشركة, which is understandable and safe, but this is trade vocabulary and belongs to a real manifest rather than to a guess. If drivers say البوردورو, that is the answer. Resolved by the same trip that settles the wilaya structure and the failure-reason taxonomy. Emphasised, and deliberately NOT a numbered troubleshooting step. It fixes nothing, so listing it after 'retry' would read as what you do once the other steps fail. It is what the driver does first, and it stays true even if retry succeeds: if his money records are gone, the company's bordereau is the surviving source."
   },
   "dbErrorStep1": "Réessayez.",
   "@dbErrorStep1": {
