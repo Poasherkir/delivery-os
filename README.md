@@ -182,10 +182,10 @@ flutter test
 dart format .
 ```
 
-Before a milestone gate:
+To check formatting without writing (what CI runs):
 
 ```bash
-flutter test integration_test/
+dart format --output=none --set-exit-if-changed .
 ```
 
 > **Never pipe a gate command.** `flutter analyze | tail -3` reports the exit

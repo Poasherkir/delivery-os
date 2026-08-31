@@ -299,6 +299,49 @@ void main() {
     expect(row.read<int>('is_retired'), 1);
   });
 
+  group('loading is not a mutation', () {
+    Future<int> count(String table) async =>
+        (await db.customSelect('SELECT count(*) c FROM $table').getSingle())
+            .read<int>('c');
+
+    test('it writes no outbox row', () async {
+      // Invariant 5 covers things the driver did, which a server will one day
+      // need to be told about. Bundled reference data is neither: it ships in
+      // the APK and never syncs, so a queued `wilaya.update` would ask a server
+      // to accept a copy of a file it shipped itself.
+      //
+      // Stated as a test because the M0 gate's invariant-5 audit found this
+      // gap — the documented case (bootstrap) had an answer and this one had a
+      // question. The next audit finds an answer.
+      await loader.load(_dataset());
+
+      expect(await count('outbox'), 0);
+    });
+
+    test('nor an audit log row', () async {
+      await loader.load(_dataset());
+
+      expect(await count('audit_logs'), 0);
+    });
+
+    test('and neither does retiring rows', () async {
+      // The path that looks most like a mutation, since it changes existing
+      // rows rather than inserting new ones.
+      await loader.load(_dataset());
+      await loader.load(
+        _dataset(
+          editWilayas: (List<Map<String, Object?>> rows) =>
+              rows.removeWhere((Map<String, Object?> r) => r['code'] == 31),
+          editCommunes: (List<Map<String, Object?>> rows) =>
+              rows.removeWhere((Map<String, Object?> r) => r['wilaya'] == 31),
+          version: 'fixture-2',
+        ),
+      );
+
+      expect(await count('outbox'), 0);
+    });
+  });
+
   test('a dataset larger than the SQL variable limit loads', () async {
     // SQLITE_MAX_VARIABLE_NUMBER is 999 on some builds and Algeria has roughly
     // 1541 communes, so any shape that puts the key set inside a statement

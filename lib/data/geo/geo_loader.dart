@@ -36,6 +36,18 @@ final class GeoLoadReport {
 /// safe to delete would carry a partial-delete policy nobody can hold in their
 /// head — so it does not have one. Everything incoming is upserted; everything
 /// absent is retired.
+///
+/// **Writes no outbox row, and that is not an oversight.** Invariant 5 covers
+/// *mutations* — things the driver did, which a server will one day need to be
+/// told about. This is neither. `wilayas` and `communes` are bundled reference
+/// data (invariant 3, category 3): they ship inside the APK, they are not the
+/// driver's data, and they never sync. A queued `wilaya.update` would be a
+/// command asking a server to accept a copy of a file it shipped itself.
+///
+/// The same reasoning as `AppBootstrap.ensureUser`, written out here rather
+/// than cross-referenced because the M0 gate's invariant-5 audit found this
+/// exact gap: the documented case had an answer and the undocumented one had a
+/// question. A test named `loading is not a mutation` pins it.
 final class GeoLoader {
   const GeoLoader(this._db);
 

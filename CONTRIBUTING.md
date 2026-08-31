@@ -117,12 +117,18 @@ cash-on-delivery parcels. The full value stays available on a named accessor
 flutter analyze                                          # must be clean
 flutter test                                             # must be green
 dart run build_runner build --delete-conflicting-outputs # after Drift/Riverpod changes
-dart format .
-flutter test integration_test/                           # before a milestone gate
+dart format .                                            # writes
+dart format --output=none --set-exit-if-changed .        # checks, writes nothing
 ```
 
 Run `flutter analyze` and `flutter test` before saying a task is done. Not after
 being asked.
+
+There is deliberately **no `flutter test integration_test/`** in this list.
+`integration_test/` is empty, and `flutter test` against an empty directory
+exits 0 — a gate command that runs nothing and reports success, which is the
+same failure as piping a gate or formatting with `--output=none`. It comes back
+when the first integration test exists, and not before.
 
 ---
 
