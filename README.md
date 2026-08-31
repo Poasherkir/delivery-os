@@ -62,9 +62,9 @@ device language is Arabic rather than French.
 
 ## Invariants
 
-[`CLAUDE.md`](CLAUDE.md) holds twelve non-negotiable invariants. They are not
-style preferences — violating one is a bug even when the code compiles and the
-tests pass. In brief:
+[`CONTRIBUTING.md`](CONTRIBUTING.md) holds twelve non-negotiable invariants.
+They are not style preferences — violating one is a bug even when the code
+compiles and the tests pass. In brief:
 
 1. Money is `int` centimes, one rounded value per order
 2. IDs are UUIDv7, generated client-side
@@ -198,7 +198,7 @@ flutter test integration_test/
 ## Database
 
 Schema version 1, 20 tables. Which columns a table gets is decided by its
-category, not by habit — five categories, documented in `CLAUDE.md`:
+category, not by habit — five categories, documented in `CONTRIBUTING.md`:
 
 | Category | Columns |
 |---|---|
@@ -248,7 +248,7 @@ self-repairs.
 
 `lib/domain/` requires 90%+ coverage. It is pure and fast; there is no excuse.
 
-Two rules worth stating outside `CLAUDE.md`, because both were learned from
+Two rules worth stating outside `CONTRIBUTING.md`, because both were learned from
 tests that passed for the wrong reason:
 
 **Expected values in money tests are derived independently of the
@@ -315,7 +315,7 @@ only for the Mapbox Matrix API.
 
 | | |
 |---|---|
-| [`CLAUDE.md`](CLAUDE.md) | project rules, invariants, workflow, testing bar |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | project rules, invariants, workflow, testing bar |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | schema, money engine, optimizer, milestone scope |
 
 ---

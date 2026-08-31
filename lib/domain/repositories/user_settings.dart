@@ -8,7 +8,7 @@
 /// Deliberately two methods and no `User` type. The only setting the MVP
 /// reconciles is the language; a richer interface would be inventing a shape
 /// for rows and fields that do not exist yet, which is the failure mode
-/// CLAUDE.md names outright.
+/// CONTRIBUTING.md names outright.
 abstract interface class UserSettings {
   /// The stored language tag, or null when no user row exists yet.
   ///

@@ -58,7 +58,7 @@ void main() {
 
   group('the five destinations', () {
     test('there are exactly five, and no more', () {
-      // CLAUDE.md: "Five bottom-nav destinations. Not six." Past five the
+      // CONTRIBUTING.md: "Five bottom-nav destinations. Not six." Past five the
       // targets drop below 40dp and this user is tapping one-handed while
       // holding a parcel. Adding a sixth should require arguing for it, not
       // just a diff that slips through review.
