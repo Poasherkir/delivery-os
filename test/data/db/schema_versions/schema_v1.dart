@@ -52,19 +52,18 @@ class Users extends Table with TableInfo {
   late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
     'display_name',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL',
+    requiredDuringInsert: false,
+    $customConstraints: 'NULL',
   );
   late final GeneratedColumn<String> locale = GeneratedColumn<String>(
     'locale',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    $customConstraints: 'NOT NULL DEFAULT \'ar\'',
-    defaultValue: const CustomExpression('\'ar\''),
+    $customConstraints: 'NULL',
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -384,6 +383,15 @@ class Wilayas extends Table with TableInfo {
     requiredDuringInsert: false,
     $customConstraints: 'NULL',
   );
+  late final GeneratedColumn<int> isRetired = GeneratedColumn<int>(
+    'is_retired',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0 CHECK (is_retired IN (0, 1))',
+    defaultValue: const CustomExpression('0'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     code,
@@ -392,6 +400,7 @@ class Wilayas extends Table with TableInfo {
     latitude,
     longitude,
     geohash,
+    isRetired,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -485,6 +494,15 @@ class Communes extends Table with TableInfo {
     requiredDuringInsert: false,
     $customConstraints: 'NULL',
   );
+  late final GeneratedColumn<int> isRetired = GeneratedColumn<int>(
+    'is_retired',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0 CHECK (is_retired IN (0, 1))',
+    defaultValue: const CustomExpression('0'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -495,6 +513,7 @@ class Communes extends Table with TableInfo {
     longitude,
     geohash,
     boundary,
+    isRetired,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;

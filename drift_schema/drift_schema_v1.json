@@ -98,7 +98,7 @@
             "name": "display_name",
             "getter_name": "displayName",
             "moor_type": "string",
-            "nullable": false,
+            "nullable": true,
             "customConstraints": null,
             "default_dart": null,
             "default_client_dart": null,
@@ -115,9 +115,9 @@
             "name": "locale",
             "getter_name": "locale",
             "moor_type": "string",
-            "nullable": false,
+            "nullable": true,
             "customConstraints": null,
-            "default_dart": "const CustomExpression('\\'ar\\'')",
+            "default_dart": null,
             "default_client_dart": null,
             "dsl_features": [
               {
@@ -557,6 +557,20 @@
             "default_dart": null,
             "default_client_dart": null,
             "dsl_features": []
+          },
+          {
+            "name": "is_retired",
+            "getter_name": "isRetired",
+            "moor_type": "bool",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "CHECK (\"is_retired\" IN (0, 1))",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "CHECK (\"is_retired\" IN (0, 1))"
+            },
+            "default_dart": "const CustomExpression('0')",
+            "default_client_dart": null,
+            "dsl_features": []
           }
         ],
         "is_virtual": false,
@@ -684,6 +698,20 @@
             "nullable": true,
             "customConstraints": null,
             "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "is_retired",
+            "getter_name": "isRetired",
+            "moor_type": "bool",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "CHECK (\"is_retired\" IN (0, 1))",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "CHECK (\"is_retired\" IN (0, 1))"
+            },
+            "default_dart": "const CustomExpression('0')",
             "default_client_dart": null,
             "dsl_features": []
           }
@@ -4314,7 +4342,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"users\" (\"id\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, \"deleted_at\" INTEGER NULL, \"phone\" TEXT NULL UNIQUE, \"display_name\" TEXT NOT NULL, \"locale\" TEXT NOT NULL DEFAULT 'ar', PRIMARY KEY (\"id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"users\" (\"id\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, \"deleted_at\" INTEGER NULL, \"phone\" TEXT NULL UNIQUE, \"display_name\" TEXT NULL, \"locale\" TEXT NULL, PRIMARY KEY (\"id\"));"
         }
       ]
     },
@@ -4341,7 +4369,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"wilayas\" (\"code\" INTEGER NOT NULL, \"name_fr\" TEXT NOT NULL, \"name_ar\" TEXT NOT NULL, \"latitude\" REAL NULL, \"longitude\" REAL NULL, \"geohash\" TEXT NULL, PRIMARY KEY (\"code\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"wilayas\" (\"code\" INTEGER NOT NULL, \"name_fr\" TEXT NOT NULL, \"name_ar\" TEXT NOT NULL, \"latitude\" REAL NULL, \"longitude\" REAL NULL, \"geohash\" TEXT NULL, \"is_retired\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_retired\" IN (0, 1)), PRIMARY KEY (\"code\"));"
         }
       ]
     },
@@ -4350,7 +4378,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"communes\" (\"id\" INTEGER NOT NULL, \"wilaya_code\" INTEGER NOT NULL REFERENCES wilayas (code), \"name_fr\" TEXT NOT NULL, \"name_ar\" TEXT NOT NULL, \"latitude\" REAL NULL, \"longitude\" REAL NULL, \"geohash\" TEXT NULL, \"boundary\" TEXT NULL, PRIMARY KEY (\"id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"communes\" (\"id\" INTEGER NOT NULL, \"wilaya_code\" INTEGER NOT NULL REFERENCES wilayas (code), \"name_fr\" TEXT NOT NULL, \"name_ar\" TEXT NOT NULL, \"latitude\" REAL NULL, \"longitude\" REAL NULL, \"geohash\" TEXT NULL, \"boundary\" TEXT NULL, \"is_retired\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_retired\" IN (0, 1)), PRIMARY KEY (\"id\"));"
         }
       ]
     },

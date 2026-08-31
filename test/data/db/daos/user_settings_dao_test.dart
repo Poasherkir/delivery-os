@@ -38,13 +38,13 @@ void main() {
     test('is null before bootstrap has run', () async {
       // A real state, not an error: it is what a launch sees between the
       // database opening and the user row being seeded.
-      expect(await dao.locale(), isNull);
+      expect(await dao.localePreference(), isNull);
     });
 
     test('returns the seeded locale', () async {
       await seed();
 
-      expect(await dao.locale(), 'ar');
+      expect((await dao.localePreference())!.tag, 'ar');
     });
   });
 
@@ -54,7 +54,7 @@ void main() {
 
       await dao.setLocale('fr');
 
-      expect(await dao.locale(), 'fr');
+      expect((await dao.localePreference())!.tag, 'fr');
     });
 
     test('moves updated_at and leaves created_at alone', () async {

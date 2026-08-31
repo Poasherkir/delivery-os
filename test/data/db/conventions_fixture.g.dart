@@ -65,27 +65,26 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
   late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
     'display_name',
     aliasedName,
-    false,
+    true,
     additionalChecks: GeneratedColumn.checkTextLength(
       minTextLength: 1,
       maxTextLength: 120,
     ),
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _localeMeta = const VerificationMeta('locale');
   @override
   late final GeneratedColumn<String> locale = GeneratedColumn<String>(
     'locale',
     aliasedName,
-    false,
+    true,
     additionalChecks: GeneratedColumn.checkTextLength(
       minTextLength: 2,
       maxTextLength: 8,
     ),
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('ar'),
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -122,8 +121,6 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
           _displayNameMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_displayNameMeta);
     }
     if (data.containsKey('locale')) {
       context.handle(
@@ -171,11 +168,11 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
-      )!,
+      ),
       locale: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}locale'],
-      )!,
+      ),
     );
   }
 
@@ -211,27 +208,47 @@ class User extends DataClass implements Insertable<User> {
   /// treated as real. SQLite permits many nulls in a unique index, so the
   /// constraint still holds once real numbers arrive at V2.
   final PhoneE164? phone;
-  final String displayName;
 
-  /// Language tag, `ar` or `fr`.
+  /// Null until the driver tells us their name.
+  ///
+  /// Same reasoning as [phone], and it matters for the same reason: there is no
+  /// signup, so a non-null column would force `data/` to invent a placeholder,
+  /// and a placeholder in a *display* field is one that eventually gets shown
+  /// to someone. Null is the honest representation of "not asked yet", and the
+  /// presentation layer is where a localized stand-in belongs.
+  final String? displayName;
+
+  /// Language tag, `ar` or `fr` — or **null, meaning "follow the device"**.
+  ///
+  /// Nullable on purpose, and the null is the whole point. This column stores
+  /// the driver's *preference*, not its effective value on one handset, because
+  /// the preference is what syncs at V2. A driver set to "follow the device"
+  /// who moves to a phone configured in French wants French; storing the
+  /// resolved tag `ar` from the old phone would hand them Arabic on a French
+  /// phone with no way to understand why.
+  ///
+  /// No default, for the same reason. A default of `ar` would record a
+  /// preference the driver never expressed, and first launch would be
+  /// indistinguishable from someone who deliberately chose Arabic.
   ///
   /// Plain text rather than an enum converter, deliberately. A locale that this
   /// build no longer ships must degrade to "follow the device" rather than
   /// throw — dropping a language must not brick the app for whoever had it
   /// selected. `AppLocales.isSupported` decides; the column just stores.
   ///
-  /// This is the value that *syncs* at V2. The value the first frame reads
-  /// lives in shared preferences, because the encrypted database needs an async
-  /// keystore round trip to open. Reconciling the two is M0-21's problem.
-  final String locale;
+  /// The value the first frame reads lives in shared preferences, because the
+  /// encrypted database needs an async keystore round trip to open. That store
+  /// is a cache of this one: writes go here first and mirror there second, so
+  /// it can only ever be stale, never ahead.
+  final String? locale;
   const User({
     required this.id,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
     this.phone,
-    required this.displayName,
-    required this.locale,
+    this.displayName,
+    this.locale,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -257,8 +274,12 @@ class User extends DataClass implements Insertable<User> {
         $UsersTable.$converterphonen.toSql(phone),
       );
     }
-    map['display_name'] = Variable<String>(displayName);
-    map['locale'] = Variable<String>(locale);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || locale != null) {
+      map['locale'] = Variable<String>(locale);
+    }
     return map;
   }
 
@@ -273,8 +294,12 @@ class User extends DataClass implements Insertable<User> {
       phone: phone == null && nullToAbsent
           ? const Value.absent()
           : Value(phone),
-      displayName: Value(displayName),
-      locale: Value(locale),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      locale: locale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locale),
     );
   }
 
@@ -289,8 +314,8 @@ class User extends DataClass implements Insertable<User> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       phone: serializer.fromJson<PhoneE164?>(json['phone']),
-      displayName: serializer.fromJson<String>(json['displayName']),
-      locale: serializer.fromJson<String>(json['locale']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      locale: serializer.fromJson<String?>(json['locale']),
     );
   }
   @override
@@ -302,8 +327,8 @@ class User extends DataClass implements Insertable<User> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'phone': serializer.toJson<PhoneE164?>(phone),
-      'displayName': serializer.toJson<String>(displayName),
-      'locale': serializer.toJson<String>(locale),
+      'displayName': serializer.toJson<String?>(displayName),
+      'locale': serializer.toJson<String?>(locale),
     };
   }
 
@@ -313,16 +338,16 @@ class User extends DataClass implements Insertable<User> {
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
     Value<PhoneE164?> phone = const Value.absent(),
-    String? displayName,
-    String? locale,
+    Value<String?> displayName = const Value.absent(),
+    Value<String?> locale = const Value.absent(),
   }) => User(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     phone: phone.present ? phone.value : this.phone,
-    displayName: displayName ?? this.displayName,
-    locale: locale ?? this.locale,
+    displayName: displayName.present ? displayName.value : this.displayName,
+    locale: locale.present ? locale.value : this.locale,
   );
   User copyWithCompanion(UsersCompanion data) {
     return User(
@@ -381,8 +406,8 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
   final Value<PhoneE164?> phone;
-  final Value<String> displayName;
-  final Value<String> locale;
+  final Value<String?> displayName;
+  final Value<String?> locale;
   final Value<int> rowid;
   const UsersCompanion({
     this.id = const Value.absent(),
@@ -400,13 +425,12 @@ class UsersCompanion extends UpdateCompanion<User> {
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
     this.phone = const Value.absent(),
-    required String displayName,
+    this.displayName = const Value.absent(),
     this.locale = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt),
-       displayName = Value(displayName);
+       updatedAt = Value(updatedAt);
   static Insertable<User> custom({
     Expression<String>? id,
     Expression<int>? createdAt,
@@ -435,8 +459,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
     Value<PhoneE164?>? phone,
-    Value<String>? displayName,
-    Value<String>? locale,
+    Value<String?>? displayName,
+    Value<String?>? locale,
     Value<int>? rowid,
   }) {
     return UsersCompanion(
@@ -2231,8 +2255,8 @@ typedef $$UsersTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
       Value<PhoneE164?> phone,
-      required String displayName,
-      Value<String> locale,
+      Value<String?> displayName,
+      Value<String?> locale,
       Value<int> rowid,
     });
 typedef $$UsersTableUpdateCompanionBuilder =
@@ -2242,8 +2266,8 @@ typedef $$UsersTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
       Value<PhoneE164?> phone,
-      Value<String> displayName,
-      Value<String> locale,
+      Value<String?> displayName,
+      Value<String?> locale,
       Value<int> rowid,
     });
 
@@ -2407,8 +2431,8 @@ class $$UsersTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<PhoneE164?> phone = const Value.absent(),
-                Value<String> displayName = const Value.absent(),
-                Value<String> locale = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<String?> locale = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UsersCompanion(
                 id: id,
@@ -2427,8 +2451,8 @@ class $$UsersTableTableManager
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<PhoneE164?> phone = const Value.absent(),
-                required String displayName,
-                Value<String> locale = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<String?> locale = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UsersCompanion.insert(
                 id: id,

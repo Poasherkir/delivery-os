@@ -32,15 +32,21 @@ final class AppBootstrap {
   /// `user.create` would be a command the server must learn to ignore. The M0
   /// gate's invariant-5 audit should read this paragraph and move on.
   ///
-  /// [displayName] is passed in rather than invented here. The driver has not
-  /// told us their name at first launch, and `data/` is the wrong layer to be
-  /// choosing user-facing text — invariant 10 forbids hardcoded strings, and a
-  /// placeholder minted here would not re-localize when the driver switches
-  /// language. The caller has the l10n bundle; this does not.
-  Future<User> ensureUser({
-    required String locale,
-    required String displayName,
-  }) {
+  /// **Both fields default to null, and that is the correct first-launch
+  /// state** rather than a gap waiting to be filled.
+  ///
+  /// [locale] null means "follow the device". Seeding the *resolved* device tag
+  /// instead would look harmless and would be the bug the nullable column
+  /// exists to prevent: it records a preference the driver never expressed, so
+  /// a driver who has never touched the language setting would sync `ar` to a
+  /// second phone configured in French and be given Arabic there. The device
+  /// locale still decides what renders — it just is not a preference.
+  ///
+  /// [displayName] null means the driver has not told us their name. `data/` is
+  /// the wrong layer to invent user-facing text: invariant 10 forbids hardcoded
+  /// strings, and a placeholder minted here would not re-localize when the
+  /// driver switches language. A localized stand-in belongs in presentation.
+  Future<User> ensureUser({String? locale, String? displayName}) {
     return _db.transaction(() async {
       final User? existing = await selectCurrentUser(_db);
       if (existing != null) {
@@ -53,7 +59,7 @@ final class AppBootstrap {
           .insertReturning(
             UsersCompanion.insert(
               id: _uuid.next(),
-              displayName: displayName,
+              displayName: Value(displayName),
               locale: Value(locale),
               createdAt: now,
               updatedAt: now,

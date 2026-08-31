@@ -13,10 +13,14 @@ final class _FakeSettings implements UserSettings {
   _FakeSettings(this._prefs, {this.stored, this.failWrite = false});
 
   final SharedPreferences _prefs;
-  String? stored;
+
+  /// The stored preference. Outer null means no user row at all; a
+  /// `LocalePreference(null)` means a row whose preference is "follow the
+  /// device". The two are different states and the tests exercise both.
+  LocalePreference? stored;
   final bool failWrite;
 
-  final List<String> writes = <String>[];
+  final List<String?> writes = <String?>[];
 
   /// What preferences held at the instant the database write ran.
   ///
@@ -27,17 +31,17 @@ final class _FakeSettings implements UserSettings {
   bool wroteAtLeastOnce = false;
 
   @override
-  Future<String?> locale() async => stored;
+  Future<LocalePreference?> localePreference() async => stored;
 
   @override
-  Future<void> setLocale(String locale) async {
+  Future<void> setLocale(String? locale) async {
     if (failWrite) {
       throw StateError('the database write failed');
     }
     prefsDuringWrite = _prefs.getString(LocaleController.storageKey);
     wroteAtLeastOnce = true;
     writes.add(locale);
-    stored = locale;
+    stored = LocalePreference(locale);
   }
 }
 
@@ -47,18 +51,18 @@ void main() {
   late SharedPreferences prefs;
   late _FakeSettings fake;
 
-  /// Builds a container. [dbLocale] is what `users.locale` holds; [stored] is
+  /// Builds a container. [dbPreference] is what `users.locale` holds; [stored] is
   /// what preferences holds; [withDatabase] false stands in for a database
   /// that never opened.
   Future<ProviderContainer> container({
     Map<String, Object> stored = const <String, Object>{},
-    String? dbLocale,
+    LocalePreference? dbPreference,
     bool withDatabase = true,
     bool failWrite = false,
   }) async {
     SharedPreferences.setMockInitialValues(stored);
     prefs = await SharedPreferences.getInstance();
-    fake = _FakeSettings(prefs, stored: dbLocale, failWrite: failWrite);
+    fake = _FakeSettings(prefs, stored: dbPreference, failWrite: failWrite);
 
     // `Override` is not exported by Riverpod 3; the list type is inferred.
     final ProviderContainer c = ProviderContainer(
@@ -79,7 +83,7 @@ void main() {
       // stops that question from ever arising.
       final ProviderContainer c = await container(
         stored: <String, Object>{LocaleController.storageKey: 'ar'},
-        dbLocale: 'ar',
+        dbPreference: const LocalePreference('ar'),
       );
 
       await c.read(localeControllerProvider.notifier).select(AppLocales.french);
@@ -93,13 +97,33 @@ void main() {
     });
 
     test('and preferences catches up afterwards', () async {
-      final ProviderContainer c = await container(dbLocale: 'ar');
+      final ProviderContainer c = await container(
+        dbPreference: const LocalePreference('ar'),
+      );
 
       await c.read(localeControllerProvider.notifier).select(AppLocales.french);
 
-      expect(fake.writes, <String>['fr']);
+      expect(fake.writes, <String?>['fr']);
       expect(prefs.getString(LocaleController.storageKey), 'fr');
       expect(c.read(localeControllerProvider), AppLocales.french);
+    });
+
+    test('choosing System writes null to the database, not a tag', () async {
+      // The write that makes the whole design work. Recording the *resolved*
+      // language here would turn a standing instruction into a fixed choice,
+      // and at V2 would hand this phone's language to a phone configured
+      // differently — the exact bug the nullable column prevents.
+      final ProviderContainer c = await container(
+        stored: <String, Object>{LocaleController.storageKey: 'fr'},
+        dbPreference: const LocalePreference('fr'),
+      );
+
+      await c.read(localeControllerProvider.notifier).select(null);
+
+      expect(fake.writes, <String?>[null]);
+      expect(fake.stored, const LocalePreference(null));
+      expect(prefs.getString(LocaleController.storageKey), isNull);
+      expect(c.read(localeControllerProvider), isNull);
     });
 
     test('a failed database write leaves preferences untouched', () async {
@@ -153,7 +177,7 @@ void main() {
       // so when the two disagree the database is right by construction.
       final ProviderContainer c = await container(
         stored: <String, Object>{LocaleController.storageKey: 'ar'},
-        dbLocale: 'fr',
+        dbPreference: const LocalePreference('fr'),
       );
       expect(c.read(localeControllerProvider), AppLocales.arabic);
 
@@ -167,7 +191,7 @@ void main() {
       // correction has to be repeated forever.
       final ProviderContainer c = await container(
         stored: <String, Object>{LocaleController.storageKey: 'ar'},
-        dbLocale: 'fr',
+        dbPreference: const LocalePreference('fr'),
       );
 
       await c.read(localeControllerProvider.notifier).reconcile();
@@ -175,12 +199,47 @@ void main() {
       expect(prefs.getString(LocaleController.storageKey), 'fr');
     });
 
-    test('"follow the device" is never converted into a choice', () async {
-      // `users.locale` is a non-null tag with no way to say "follow the
-      // device". A concrete value there must not manufacture an override the
-      // driver never made, or they never get their device language back.
-      final ProviderContainer c = await container(dbLocale: 'fr');
+    test('an explicit preference reaches a cache that had none', () async {
+      // Both stores hold the same datum now, so this is not a special case: the
+      // database says the driver chose French, the cache has no override, and
+      // the database wins like anywhere else. At V2 this is a choice made on
+      // another handset arriving here.
+      final ProviderContainer c = await container(
+        dbPreference: const LocalePreference('fr'),
+      );
       expect(c.read(localeControllerProvider), isNull);
+
+      await c.read(localeControllerProvider.notifier).reconcile();
+
+      expect(c.read(localeControllerProvider), AppLocales.french);
+      expect(prefs.getString(LocaleController.storageKey), 'fr');
+    });
+
+    test('"follow the device" clears a stale explicit override', () async {
+      // The direction that was impossible before the column became nullable,
+      // and the reason it had to. A driver who switched back to System on
+      // another device must get System here — not keep an override the source
+      // of truth no longer holds.
+      final ProviderContainer c = await container(
+        stored: <String, Object>{LocaleController.storageKey: 'fr'},
+        dbPreference: const LocalePreference(null),
+      );
+      expect(c.read(localeControllerProvider), AppLocales.french);
+
+      await c.read(localeControllerProvider.notifier).reconcile();
+
+      expect(c.read(localeControllerProvider), isNull);
+      expect(
+        prefs.getString(LocaleController.storageKey),
+        isNull,
+        reason: 'the override should have been removed, not overwritten',
+      );
+    });
+
+    test('both agreeing on "follow the device" is a no-op', () async {
+      final ProviderContainer c = await container(
+        dbPreference: const LocalePreference(null),
+      );
 
       await c.read(localeControllerProvider.notifier).reconcile();
 
@@ -191,7 +250,7 @@ void main() {
     test('agreement is a no-op', () async {
       final ProviderContainer c = await container(
         stored: <String, Object>{LocaleController.storageKey: 'fr'},
-        dbLocale: 'fr',
+        dbPreference: const LocalePreference('fr'),
       );
 
       await c.read(localeControllerProvider.notifier).reconcile();
@@ -216,7 +275,7 @@ void main() {
       // had it selected, and least of all by clearing it silently.
       final ProviderContainer c = await container(
         stored: <String, Object>{LocaleController.storageKey: 'fr'},
-        dbLocale: 'de',
+        dbPreference: const LocalePreference('de'),
       );
 
       await c.read(localeControllerProvider.notifier).reconcile();
@@ -228,7 +287,7 @@ void main() {
     test('is safe to run on every launch', () async {
       final ProviderContainer c = await container(
         stored: <String, Object>{LocaleController.storageKey: 'ar'},
-        dbLocale: 'fr',
+        dbPreference: const LocalePreference('fr'),
       );
 
       final LocaleController controller = c.read(

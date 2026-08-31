@@ -425,8 +425,16 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE TABLE users (
   id            UUID PRIMARY KEY,
   phone         TEXT UNIQUE,           -- null until an account exists (V2)
-  display_name  TEXT NOT NULL,
-  locale        TEXT NOT NULL DEFAULT 'ar',
+  display_name  TEXT,                  -- null until the driver is asked; no
+                                       -- signup, and a placeholder in a display
+                                       -- field eventually gets shown to someone
+  -- Nullable, and null means "follow the device". This stores the driver's
+  -- *preference*, not its resolved value on one handset, because the preference
+  -- is what syncs at V2: someone set to "follow the device" who moves to a
+  -- French phone wants French, and storing the old phone's resolved `ar` would
+  -- hand them Arabic with no way to understand why. No default, for the same
+  -- reason — `ar` would record a choice nobody made.
+  locale        TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at    TIMESTAMPTZ
@@ -475,7 +483,15 @@ CREATE TABLE wilayas (
   code       SMALLINT PRIMARY KEY,     -- no range constraint: see §1.5
   name_fr    TEXT NOT NULL,
   name_ar    TEXT NOT NULL,
-  centroid   GEOGRAPHY(POINT,4326)     -- nullable: a dataset may omit it
+  centroid   GEOGRAPHY(POINT,4326),    -- nullable: a dataset may omit it
+  -- The loader NEVER deletes. Reform merges and renames wilayas, and
+  -- customer_addresses holds foreign keys here, so a delete would orphan a real
+  -- address — and a loader deciding which rows are safe to delete carries a
+  -- partial-delete policy nobody can hold in their head. A row absent from an
+  -- incoming dataset is retired instead. Pickers and search filter on
+  -- is_retired = false; lookups by id ignore it, so an address pointing at a
+  -- merged wilaya still resolves and still renders its name.
+  is_retired BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE communes (
@@ -489,7 +505,13 @@ CREATE TABLE communes (
   -- not, because an Algiers commune is a few square kilometres and a Saharan
   -- one is thousands. Unused in M0. If the bundled dataset carries boundaries
   -- the column is already here; if not, gate 2 degrades as documented.
-  boundary    TEXT
+  boundary    TEXT,
+  -- See wilayas.is_retired. Communes are where it earns its keep: the eleven
+  -- wilayas created in November 2025 were carved out of existing ones, so
+  -- commune shapes did not move but their parent did. A pre-reform dataset
+  -- assigns them to a wilaya that no longer exists, and retiring rather than
+  -- deleting absorbs that without breaking a single stored address.
+  is_retired  BOOLEAN NOT NULL DEFAULT false
 );
 
 -- ============ CUSTOMERS ============

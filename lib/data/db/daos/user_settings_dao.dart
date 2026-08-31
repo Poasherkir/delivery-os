@@ -34,10 +34,15 @@ final class UserSettingsDao implements UserSettings {
   final String _deviceId;
 
   @override
-  Future<String?> locale() async => (await selectCurrentUser(_db))?.locale;
+  Future<LocalePreference?> localePreference() async {
+    final User? user = await selectCurrentUser(_db);
+    // Outer null: no row. Inner null: a row whose preference is "follow the
+    // device". Flattening these would lose the difference.
+    return user == null ? null : LocalePreference(user.locale);
+  }
 
   @override
-  Future<void> setLocale(String locale) {
+  Future<void> setLocale(String? locale) {
     return _db.transaction(() async {
       final User? user = await selectCurrentUser(_db);
       if (user == null) {
@@ -62,6 +67,10 @@ final class UserSettingsDao implements UserSettings {
       // driver asked for, and it replays correctly whatever else changed in
       // the meantime. `operation` is `update` because that is what happened to
       // the row; the payload is what makes it replayable.
+      //
+      // `{"locale": null}` is a real command, not an empty one: it says
+      // "follow the device", which is a preference a second device must be
+      // told about just as much as an explicit choice.
       await _db
           .into(_db.outbox)
           .insert(
@@ -70,7 +79,7 @@ final class UserSettingsDao implements UserSettings {
               entityType: 'user',
               entityId: user.id,
               operation: OutboxOperation.update,
-              payload: jsonEncode(<String, String>{'locale': locale}),
+              payload: jsonEncode(<String, String?>{'locale': locale}),
               deviceId: _deviceId,
               createdAt: now,
             ),

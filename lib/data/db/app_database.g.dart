@@ -65,27 +65,26 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
   late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
     'display_name',
     aliasedName,
-    false,
+    true,
     additionalChecks: GeneratedColumn.checkTextLength(
       minTextLength: 1,
       maxTextLength: 120,
     ),
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _localeMeta = const VerificationMeta('locale');
   @override
   late final GeneratedColumn<String> locale = GeneratedColumn<String>(
     'locale',
     aliasedName,
-    false,
+    true,
     additionalChecks: GeneratedColumn.checkTextLength(
       minTextLength: 2,
       maxTextLength: 8,
     ),
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('ar'),
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -122,8 +121,6 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
           _displayNameMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_displayNameMeta);
     }
     if (data.containsKey('locale')) {
       context.handle(
@@ -171,11 +168,11 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
-      )!,
+      ),
       locale: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}locale'],
-      )!,
+      ),
     );
   }
 
@@ -211,27 +208,47 @@ class User extends DataClass implements Insertable<User> {
   /// treated as real. SQLite permits many nulls in a unique index, so the
   /// constraint still holds once real numbers arrive at V2.
   final PhoneE164? phone;
-  final String displayName;
 
-  /// Language tag, `ar` or `fr`.
+  /// Null until the driver tells us their name.
+  ///
+  /// Same reasoning as [phone], and it matters for the same reason: there is no
+  /// signup, so a non-null column would force `data/` to invent a placeholder,
+  /// and a placeholder in a *display* field is one that eventually gets shown
+  /// to someone. Null is the honest representation of "not asked yet", and the
+  /// presentation layer is where a localized stand-in belongs.
+  final String? displayName;
+
+  /// Language tag, `ar` or `fr` — or **null, meaning "follow the device"**.
+  ///
+  /// Nullable on purpose, and the null is the whole point. This column stores
+  /// the driver's *preference*, not its effective value on one handset, because
+  /// the preference is what syncs at V2. A driver set to "follow the device"
+  /// who moves to a phone configured in French wants French; storing the
+  /// resolved tag `ar` from the old phone would hand them Arabic on a French
+  /// phone with no way to understand why.
+  ///
+  /// No default, for the same reason. A default of `ar` would record a
+  /// preference the driver never expressed, and first launch would be
+  /// indistinguishable from someone who deliberately chose Arabic.
   ///
   /// Plain text rather than an enum converter, deliberately. A locale that this
   /// build no longer ships must degrade to "follow the device" rather than
   /// throw — dropping a language must not brick the app for whoever had it
   /// selected. `AppLocales.isSupported` decides; the column just stores.
   ///
-  /// This is the value that *syncs* at V2. The value the first frame reads
-  /// lives in shared preferences, because the encrypted database needs an async
-  /// keystore round trip to open. Reconciling the two is M0-21's problem.
-  final String locale;
+  /// The value the first frame reads lives in shared preferences, because the
+  /// encrypted database needs an async keystore round trip to open. That store
+  /// is a cache of this one: writes go here first and mirror there second, so
+  /// it can only ever be stale, never ahead.
+  final String? locale;
   const User({
     required this.id,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
     this.phone,
-    required this.displayName,
-    required this.locale,
+    this.displayName,
+    this.locale,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -257,8 +274,12 @@ class User extends DataClass implements Insertable<User> {
         $UsersTable.$converterphonen.toSql(phone),
       );
     }
-    map['display_name'] = Variable<String>(displayName);
-    map['locale'] = Variable<String>(locale);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || locale != null) {
+      map['locale'] = Variable<String>(locale);
+    }
     return map;
   }
 
@@ -273,8 +294,12 @@ class User extends DataClass implements Insertable<User> {
       phone: phone == null && nullToAbsent
           ? const Value.absent()
           : Value(phone),
-      displayName: Value(displayName),
-      locale: Value(locale),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      locale: locale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locale),
     );
   }
 
@@ -289,8 +314,8 @@ class User extends DataClass implements Insertable<User> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       phone: serializer.fromJson<PhoneE164?>(json['phone']),
-      displayName: serializer.fromJson<String>(json['displayName']),
-      locale: serializer.fromJson<String>(json['locale']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      locale: serializer.fromJson<String?>(json['locale']),
     );
   }
   @override
@@ -302,8 +327,8 @@ class User extends DataClass implements Insertable<User> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'phone': serializer.toJson<PhoneE164?>(phone),
-      'displayName': serializer.toJson<String>(displayName),
-      'locale': serializer.toJson<String>(locale),
+      'displayName': serializer.toJson<String?>(displayName),
+      'locale': serializer.toJson<String?>(locale),
     };
   }
 
@@ -313,16 +338,16 @@ class User extends DataClass implements Insertable<User> {
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
     Value<PhoneE164?> phone = const Value.absent(),
-    String? displayName,
-    String? locale,
+    Value<String?> displayName = const Value.absent(),
+    Value<String?> locale = const Value.absent(),
   }) => User(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     phone: phone.present ? phone.value : this.phone,
-    displayName: displayName ?? this.displayName,
-    locale: locale ?? this.locale,
+    displayName: displayName.present ? displayName.value : this.displayName,
+    locale: locale.present ? locale.value : this.locale,
   );
   User copyWithCompanion(UsersCompanion data) {
     return User(
@@ -381,8 +406,8 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
   final Value<PhoneE164?> phone;
-  final Value<String> displayName;
-  final Value<String> locale;
+  final Value<String?> displayName;
+  final Value<String?> locale;
   final Value<int> rowid;
   const UsersCompanion({
     this.id = const Value.absent(),
@@ -400,13 +425,12 @@ class UsersCompanion extends UpdateCompanion<User> {
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
     this.phone = const Value.absent(),
-    required String displayName,
+    this.displayName = const Value.absent(),
     this.locale = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt),
-       displayName = Value(displayName);
+       updatedAt = Value(updatedAt);
   static Insertable<User> custom({
     Expression<String>? id,
     Expression<int>? createdAt,
@@ -435,8 +459,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
     Value<PhoneE164?>? phone,
-    Value<String>? displayName,
-    Value<String>? locale,
+    Value<String?>? displayName,
+    Value<String?>? locale,
     Value<int>? rowid,
   }) {
     return UsersCompanion(
@@ -1802,6 +1826,21 @@ class $WilayasTable extends Wilayas with TableInfo<$WilayasTable, Wilaya> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isRetiredMeta = const VerificationMeta(
+    'isRetired',
+  );
+  @override
+  late final GeneratedColumn<bool> isRetired = GeneratedColumn<bool>(
+    'is_retired',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_retired" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     code,
@@ -1810,6 +1849,7 @@ class $WilayasTable extends Wilayas with TableInfo<$WilayasTable, Wilaya> {
     latitude,
     longitude,
     geohash,
+    isRetired,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1863,6 +1903,12 @@ class $WilayasTable extends Wilayas with TableInfo<$WilayasTable, Wilaya> {
         geohash.isAcceptableOrUnknown(data['geohash']!, _geohashMeta),
       );
     }
+    if (data.containsKey('is_retired')) {
+      context.handle(
+        _isRetiredMeta,
+        isRetired.isAcceptableOrUnknown(data['is_retired']!, _isRetiredMeta),
+      );
+    }
     return context;
   }
 
@@ -1896,6 +1942,10 @@ class $WilayasTable extends Wilayas with TableInfo<$WilayasTable, Wilaya> {
         DriftSqlType.string,
         data['${effectivePrefix}geohash'],
       ),
+      isRetired: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_retired'],
+      )!,
     );
   }
 
@@ -1919,6 +1969,29 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
   /// Precision-9 geohash of the centroid, for prefix proximity queries. SQLite
   /// has no PostGIS, so this is the index.
   final String? geohash;
+
+  /// True when a dataset update no longer lists this row.
+  ///
+  /// **The loader never deletes.** Administrative reform merges and renames
+  /// wilayas — 48 became 58 in 2019 and 69 in 2025 — and `customer_addresses`
+  /// holds foreign keys into this table. Deleting a row that a real customer
+  /// address points at would orphan it, and a loader that had to decide which
+  /// rows are safe to delete would carry a partial-delete policy nobody can
+  /// hold in their head.
+  ///
+  /// So retirement is a state rather than an absence, with defined behaviour on
+  /// each side:
+  ///
+  /// * **Pickers and search filter on `is_retired = false`** — nobody gets
+  ///   offered a wilaya that no longer exists.
+  /// * **Lookups by id ignore it entirely** — an address pointing at a merged
+  ///   wilaya still resolves and still renders its name, so old orders stay
+  ///   readable forever.
+  ///
+  /// Functional state, not an audit column: the same category as
+  /// `matrix_cache.fetched_at`, so it does not disturb invariant 3's
+  /// bundled-reference-data rule that this table carries no audit columns.
+  final bool isRetired;
   const Wilaya({
     required this.code,
     required this.nameFr,
@@ -1926,6 +1999,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
     this.latitude,
     this.longitude,
     this.geohash,
+    required this.isRetired,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1942,6 +2016,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
     if (!nullToAbsent || geohash != null) {
       map['geohash'] = Variable<String>(geohash);
     }
+    map['is_retired'] = Variable<bool>(isRetired);
     return map;
   }
 
@@ -1959,6 +2034,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
       geohash: geohash == null && nullToAbsent
           ? const Value.absent()
           : Value(geohash),
+      isRetired: Value(isRetired),
     );
   }
 
@@ -1974,6 +2050,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
       geohash: serializer.fromJson<String?>(json['geohash']),
+      isRetired: serializer.fromJson<bool>(json['isRetired']),
     );
   }
   @override
@@ -1986,6 +2063,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
       'geohash': serializer.toJson<String?>(geohash),
+      'isRetired': serializer.toJson<bool>(isRetired),
     };
   }
 
@@ -1996,6 +2074,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
     Value<String?> geohash = const Value.absent(),
+    bool? isRetired,
   }) => Wilaya(
     code: code ?? this.code,
     nameFr: nameFr ?? this.nameFr,
@@ -2003,6 +2082,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
     geohash: geohash.present ? geohash.value : this.geohash,
+    isRetired: isRetired ?? this.isRetired,
   );
   Wilaya copyWithCompanion(WilayasCompanion data) {
     return Wilaya(
@@ -2012,6 +2092,7 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
       latitude: data.latitude.present ? data.latitude.value : this.latitude,
       longitude: data.longitude.present ? data.longitude.value : this.longitude,
       geohash: data.geohash.present ? data.geohash.value : this.geohash,
+      isRetired: data.isRetired.present ? data.isRetired.value : this.isRetired,
     );
   }
 
@@ -2023,14 +2104,22 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
           ..write('nameAr: $nameAr, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
-          ..write('geohash: $geohash')
+          ..write('geohash: $geohash, ')
+          ..write('isRetired: $isRetired')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(code, nameFr, nameAr, latitude, longitude, geohash);
+  int get hashCode => Object.hash(
+    code,
+    nameFr,
+    nameAr,
+    latitude,
+    longitude,
+    geohash,
+    isRetired,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2040,7 +2129,8 @@ class Wilaya extends DataClass implements Insertable<Wilaya> {
           other.nameAr == this.nameAr &&
           other.latitude == this.latitude &&
           other.longitude == this.longitude &&
-          other.geohash == this.geohash);
+          other.geohash == this.geohash &&
+          other.isRetired == this.isRetired);
 }
 
 class WilayasCompanion extends UpdateCompanion<Wilaya> {
@@ -2050,6 +2140,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
   final Value<double?> latitude;
   final Value<double?> longitude;
   final Value<String?> geohash;
+  final Value<bool> isRetired;
   const WilayasCompanion({
     this.code = const Value.absent(),
     this.nameFr = const Value.absent(),
@@ -2057,6 +2148,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
     this.geohash = const Value.absent(),
+    this.isRetired = const Value.absent(),
   });
   WilayasCompanion.insert({
     this.code = const Value.absent(),
@@ -2065,6 +2157,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
     this.geohash = const Value.absent(),
+    this.isRetired = const Value.absent(),
   }) : nameFr = Value(nameFr),
        nameAr = Value(nameAr);
   static Insertable<Wilaya> custom({
@@ -2074,6 +2167,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
     Expression<double>? latitude,
     Expression<double>? longitude,
     Expression<String>? geohash,
+    Expression<bool>? isRetired,
   }) {
     return RawValuesInsertable({
       if (code != null) 'code': code,
@@ -2082,6 +2176,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (geohash != null) 'geohash': geohash,
+      if (isRetired != null) 'is_retired': isRetired,
     });
   }
 
@@ -2092,6 +2187,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
     Value<double?>? latitude,
     Value<double?>? longitude,
     Value<String?>? geohash,
+    Value<bool>? isRetired,
   }) {
     return WilayasCompanion(
       code: code ?? this.code,
@@ -2100,6 +2196,7 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       geohash: geohash ?? this.geohash,
+      isRetired: isRetired ?? this.isRetired,
     );
   }
 
@@ -2124,6 +2221,9 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
     if (geohash.present) {
       map['geohash'] = Variable<String>(geohash.value);
     }
+    if (isRetired.present) {
+      map['is_retired'] = Variable<bool>(isRetired.value);
+    }
     return map;
   }
 
@@ -2135,7 +2235,8 @@ class WilayasCompanion extends UpdateCompanion<Wilaya> {
           ..write('nameAr: $nameAr, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
-          ..write('geohash: $geohash')
+          ..write('geohash: $geohash, ')
+          ..write('isRetired: $isRetired')
           ..write(')'))
         .toString();
   }
@@ -2239,6 +2340,21 @@ class $CommunesTable extends Communes with TableInfo<$CommunesTable, Commune> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isRetiredMeta = const VerificationMeta(
+    'isRetired',
+  );
+  @override
+  late final GeneratedColumn<bool> isRetired = GeneratedColumn<bool>(
+    'is_retired',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_retired" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2249,6 +2365,7 @@ class $CommunesTable extends Communes with TableInfo<$CommunesTable, Commune> {
     longitude,
     geohash,
     boundary,
+    isRetired,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2313,6 +2430,12 @@ class $CommunesTable extends Communes with TableInfo<$CommunesTable, Commune> {
         boundary.isAcceptableOrUnknown(data['boundary']!, _boundaryMeta),
       );
     }
+    if (data.containsKey('is_retired')) {
+      context.handle(
+        _isRetiredMeta,
+        isRetired.isAcceptableOrUnknown(data['is_retired']!, _isRetiredMeta),
+      );
+    }
     return context;
   }
 
@@ -2354,6 +2477,10 @@ class $CommunesTable extends Communes with TableInfo<$CommunesTable, Commune> {
         DriftSqlType.string,
         data['${effectivePrefix}boundary'],
       ),
+      isRetired: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_retired'],
+      )!,
     );
   }
 
@@ -2384,6 +2511,16 @@ class Commune extends DataClass implements Insertable<Commune> {
   /// it does not, nothing breaks and gate 2 degrades to a wilaya-scaled radius
   /// — weakest in the sparse south, where it matters least.
   final String? boundary;
+
+  /// True when a dataset update no longer lists this commune. See
+  /// [Wilayas.isRetired] for the full reasoning.
+  ///
+  /// Communes are where this earns its keep. The eleven wilayas created in
+  /// November 2025 were carved out of existing ones, so commune *shapes* did
+  /// not move but their *parent* did — a dataset predating the reform assigns
+  /// them to a wilaya that no longer exists. Retiring rather than deleting is
+  /// what lets the table absorb that without breaking a single stored address.
+  final bool isRetired;
   const Commune({
     required this.id,
     required this.wilayaCode,
@@ -2393,6 +2530,7 @@ class Commune extends DataClass implements Insertable<Commune> {
     this.longitude,
     this.geohash,
     this.boundary,
+    required this.isRetired,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2413,6 +2551,7 @@ class Commune extends DataClass implements Insertable<Commune> {
     if (!nullToAbsent || boundary != null) {
       map['boundary'] = Variable<String>(boundary);
     }
+    map['is_retired'] = Variable<bool>(isRetired);
     return map;
   }
 
@@ -2434,6 +2573,7 @@ class Commune extends DataClass implements Insertable<Commune> {
       boundary: boundary == null && nullToAbsent
           ? const Value.absent()
           : Value(boundary),
+      isRetired: Value(isRetired),
     );
   }
 
@@ -2451,6 +2591,7 @@ class Commune extends DataClass implements Insertable<Commune> {
       longitude: serializer.fromJson<double?>(json['longitude']),
       geohash: serializer.fromJson<String?>(json['geohash']),
       boundary: serializer.fromJson<String?>(json['boundary']),
+      isRetired: serializer.fromJson<bool>(json['isRetired']),
     );
   }
   @override
@@ -2465,6 +2606,7 @@ class Commune extends DataClass implements Insertable<Commune> {
       'longitude': serializer.toJson<double?>(longitude),
       'geohash': serializer.toJson<String?>(geohash),
       'boundary': serializer.toJson<String?>(boundary),
+      'isRetired': serializer.toJson<bool>(isRetired),
     };
   }
 
@@ -2477,6 +2619,7 @@ class Commune extends DataClass implements Insertable<Commune> {
     Value<double?> longitude = const Value.absent(),
     Value<String?> geohash = const Value.absent(),
     Value<String?> boundary = const Value.absent(),
+    bool? isRetired,
   }) => Commune(
     id: id ?? this.id,
     wilayaCode: wilayaCode ?? this.wilayaCode,
@@ -2486,6 +2629,7 @@ class Commune extends DataClass implements Insertable<Commune> {
     longitude: longitude.present ? longitude.value : this.longitude,
     geohash: geohash.present ? geohash.value : this.geohash,
     boundary: boundary.present ? boundary.value : this.boundary,
+    isRetired: isRetired ?? this.isRetired,
   );
   Commune copyWithCompanion(CommunesCompanion data) {
     return Commune(
@@ -2499,6 +2643,7 @@ class Commune extends DataClass implements Insertable<Commune> {
       longitude: data.longitude.present ? data.longitude.value : this.longitude,
       geohash: data.geohash.present ? data.geohash.value : this.geohash,
       boundary: data.boundary.present ? data.boundary.value : this.boundary,
+      isRetired: data.isRetired.present ? data.isRetired.value : this.isRetired,
     );
   }
 
@@ -2512,7 +2657,8 @@ class Commune extends DataClass implements Insertable<Commune> {
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
           ..write('geohash: $geohash, ')
-          ..write('boundary: $boundary')
+          ..write('boundary: $boundary, ')
+          ..write('isRetired: $isRetired')
           ..write(')'))
         .toString();
   }
@@ -2527,6 +2673,7 @@ class Commune extends DataClass implements Insertable<Commune> {
     longitude,
     geohash,
     boundary,
+    isRetired,
   );
   @override
   bool operator ==(Object other) =>
@@ -2539,7 +2686,8 @@ class Commune extends DataClass implements Insertable<Commune> {
           other.latitude == this.latitude &&
           other.longitude == this.longitude &&
           other.geohash == this.geohash &&
-          other.boundary == this.boundary);
+          other.boundary == this.boundary &&
+          other.isRetired == this.isRetired);
 }
 
 class CommunesCompanion extends UpdateCompanion<Commune> {
@@ -2551,6 +2699,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
   final Value<double?> longitude;
   final Value<String?> geohash;
   final Value<String?> boundary;
+  final Value<bool> isRetired;
   const CommunesCompanion({
     this.id = const Value.absent(),
     this.wilayaCode = const Value.absent(),
@@ -2560,6 +2709,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
     this.longitude = const Value.absent(),
     this.geohash = const Value.absent(),
     this.boundary = const Value.absent(),
+    this.isRetired = const Value.absent(),
   });
   CommunesCompanion.insert({
     this.id = const Value.absent(),
@@ -2570,6 +2720,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
     this.longitude = const Value.absent(),
     this.geohash = const Value.absent(),
     this.boundary = const Value.absent(),
+    this.isRetired = const Value.absent(),
   }) : wilayaCode = Value(wilayaCode),
        nameFr = Value(nameFr),
        nameAr = Value(nameAr);
@@ -2582,6 +2733,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
     Expression<double>? longitude,
     Expression<String>? geohash,
     Expression<String>? boundary,
+    Expression<bool>? isRetired,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2592,6 +2744,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
       if (longitude != null) 'longitude': longitude,
       if (geohash != null) 'geohash': geohash,
       if (boundary != null) 'boundary': boundary,
+      if (isRetired != null) 'is_retired': isRetired,
     });
   }
 
@@ -2604,6 +2757,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
     Value<double?>? longitude,
     Value<String?>? geohash,
     Value<String?>? boundary,
+    Value<bool>? isRetired,
   }) {
     return CommunesCompanion(
       id: id ?? this.id,
@@ -2614,6 +2768,7 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
       longitude: longitude ?? this.longitude,
       geohash: geohash ?? this.geohash,
       boundary: boundary ?? this.boundary,
+      isRetired: isRetired ?? this.isRetired,
     );
   }
 
@@ -2644,6 +2799,9 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
     if (boundary.present) {
       map['boundary'] = Variable<String>(boundary.value);
     }
+    if (isRetired.present) {
+      map['is_retired'] = Variable<bool>(isRetired.value);
+    }
     return map;
   }
 
@@ -2657,7 +2815,8 @@ class CommunesCompanion extends UpdateCompanion<Commune> {
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
           ..write('geohash: $geohash, ')
-          ..write('boundary: $boundary')
+          ..write('boundary: $boundary, ')
+          ..write('isRetired: $isRetired')
           ..write(')'))
         .toString();
   }
@@ -15243,8 +15402,8 @@ typedef $$UsersTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
       Value<PhoneE164?> phone,
-      required String displayName,
-      Value<String> locale,
+      Value<String?> displayName,
+      Value<String?> locale,
       Value<int> rowid,
     });
 typedef $$UsersTableUpdateCompanionBuilder =
@@ -15254,8 +15413,8 @@ typedef $$UsersTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
       Value<PhoneE164?> phone,
-      Value<String> displayName,
-      Value<String> locale,
+      Value<String?> displayName,
+      Value<String?> locale,
       Value<int> rowid,
     });
 
@@ -16413,8 +16572,8 @@ class $$UsersTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<PhoneE164?> phone = const Value.absent(),
-                Value<String> displayName = const Value.absent(),
-                Value<String> locale = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<String?> locale = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UsersCompanion(
                 id: id,
@@ -16433,8 +16592,8 @@ class $$UsersTableTableManager
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<PhoneE164?> phone = const Value.absent(),
-                required String displayName,
-                Value<String> locale = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<String?> locale = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UsersCompanion.insert(
                 id: id,
@@ -18054,6 +18213,7 @@ typedef $$WilayasTableCreateCompanionBuilder =
       Value<double?> latitude,
       Value<double?> longitude,
       Value<String?> geohash,
+      Value<bool> isRetired,
     });
 typedef $$WilayasTableUpdateCompanionBuilder =
     WilayasCompanion Function({
@@ -18063,6 +18223,7 @@ typedef $$WilayasTableUpdateCompanionBuilder =
       Value<double?> latitude,
       Value<double?> longitude,
       Value<String?> geohash,
+      Value<bool> isRetired,
     });
 
 final class $$WilayasTableReferences
@@ -18146,6 +18307,11 @@ class $$WilayasTableFilterComposer
 
   ColumnFilters<String> get geohash => $composableBuilder(
     column: $table.geohash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRetired => $composableBuilder(
+    column: $table.isRetired,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18238,6 +18404,11 @@ class $$WilayasTableOrderingComposer
     column: $table.geohash,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isRetired => $composableBuilder(
+    column: $table.isRetired,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WilayasTableAnnotationComposer
@@ -18266,6 +18437,9 @@ class $$WilayasTableAnnotationComposer
 
   GeneratedColumn<String> get geohash =>
       $composableBuilder(column: $table.geohash, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRetired =>
+      $composableBuilder(column: $table.isRetired, builder: (column) => column);
 
   Expression<T> communesRefs<T extends Object>(
     Expression<T> Function($$CommunesTableAnnotationComposer a) f,
@@ -18356,6 +18530,7 @@ class $$WilayasTableTableManager
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<String?> geohash = const Value.absent(),
+                Value<bool> isRetired = const Value.absent(),
               }) => WilayasCompanion(
                 code: code,
                 nameFr: nameFr,
@@ -18363,6 +18538,7 @@ class $$WilayasTableTableManager
                 latitude: latitude,
                 longitude: longitude,
                 geohash: geohash,
+                isRetired: isRetired,
               ),
           createCompanionCallback:
               ({
@@ -18372,6 +18548,7 @@ class $$WilayasTableTableManager
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<String?> geohash = const Value.absent(),
+                Value<bool> isRetired = const Value.absent(),
               }) => WilayasCompanion.insert(
                 code: code,
                 nameFr: nameFr,
@@ -18379,6 +18556,7 @@ class $$WilayasTableTableManager
                 latitude: latitude,
                 longitude: longitude,
                 geohash: geohash,
+                isRetired: isRetired,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -18473,6 +18651,7 @@ typedef $$CommunesTableCreateCompanionBuilder =
       Value<double?> longitude,
       Value<String?> geohash,
       Value<String?> boundary,
+      Value<bool> isRetired,
     });
 typedef $$CommunesTableUpdateCompanionBuilder =
     CommunesCompanion Function({
@@ -18484,6 +18663,7 @@ typedef $$CommunesTableUpdateCompanionBuilder =
       Value<double?> longitude,
       Value<String?> geohash,
       Value<String?> boundary,
+      Value<bool> isRetired,
     });
 
 final class $$CommunesTableReferences
@@ -18570,6 +18750,11 @@ class $$CommunesTableFilterComposer
 
   ColumnFilters<String> get boundary => $composableBuilder(
     column: $table.boundary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRetired => $composableBuilder(
+    column: $table.isRetired,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18666,6 +18851,11 @@ class $$CommunesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isRetired => $composableBuilder(
+    column: $table.isRetired,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$WilayasTableOrderingComposer get wilayaCode {
     final $$WilayasTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -18719,6 +18909,9 @@ class $$CommunesTableAnnotationComposer
 
   GeneratedColumn<String> get boundary =>
       $composableBuilder(column: $table.boundary, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRetired =>
+      $composableBuilder(column: $table.isRetired, builder: (column) => column);
 
   $$WilayasTableAnnotationComposer get wilayaCode {
     final $$WilayasTableAnnotationComposer composer = $composerBuilder(
@@ -18806,6 +18999,7 @@ class $$CommunesTableTableManager
                 Value<double?> longitude = const Value.absent(),
                 Value<String?> geohash = const Value.absent(),
                 Value<String?> boundary = const Value.absent(),
+                Value<bool> isRetired = const Value.absent(),
               }) => CommunesCompanion(
                 id: id,
                 wilayaCode: wilayaCode,
@@ -18815,6 +19009,7 @@ class $$CommunesTableTableManager
                 longitude: longitude,
                 geohash: geohash,
                 boundary: boundary,
+                isRetired: isRetired,
               ),
           createCompanionCallback:
               ({
@@ -18826,6 +19021,7 @@ class $$CommunesTableTableManager
                 Value<double?> longitude = const Value.absent(),
                 Value<String?> geohash = const Value.absent(),
                 Value<String?> boundary = const Value.absent(),
+                Value<bool> isRetired = const Value.absent(),
               }) => CommunesCompanion.insert(
                 id: id,
                 wilayaCode: wilayaCode,
@@ -18835,6 +19031,7 @@ class $$CommunesTableTableManager
                 longitude: longitude,
                 geohash: geohash,
                 boundary: boundary,
+                isRetired: isRetired,
               ),
           withReferenceMapper: (p0) => p0
               .map(

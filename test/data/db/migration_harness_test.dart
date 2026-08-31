@@ -114,13 +114,14 @@ void main() {
       );
       await run(
         'INSERT INTO wilayas (code, name_fr, name_ar, latitude, longitude, '
-        "geohash) VALUES (16, 'Alger', 'الجزائر', 36.7538, 3.0588, 'snd1jdg67')",
+        'geohash, is_retired) VALUES '
+        "(16, 'Alger', 'الجزائر', 36.7538, 3.0588, 'snd1jdg67', 1)",
       );
       await run(
         'INSERT INTO communes (id, wilaya_code, name_fr, name_ar, latitude, '
-        'longitude, geohash, boundary) VALUES '
+        'longitude, geohash, boundary, is_retired) VALUES '
         "(1601, 16, 'Bab Ezzouar', 'باب الزوار', 36.72, 3.19, 'sndj', "
-        '\'{"type":"Polygon"}\')',
+        '\'{"type":"Polygon"}\', 1)',
       );
       await run(
         'INSERT INTO customers (id, owner_id, phone_e164, phone_alt, '
@@ -375,6 +376,22 @@ void main() {
           .getSingle();
       expect(address.read<int>('geo_confidence'), 4);
       expect(address.read<int>('accuracy_m'), 12);
+
+      // Retirement survives too. A migration that reset this would silently
+      // resurrect wilayas and communes the state has abolished, putting them
+      // back into every picker.
+      expect(
+        (await after.customSelect('SELECT is_retired FROM wilayas').getSingle())
+            .read<int>('is_retired'),
+        1,
+      );
+      expect(
+        (await after
+                .customSelect('SELECT is_retired FROM communes')
+                .getSingle())
+            .read<int>('is_retired'),
+        1,
+      );
     });
   });
 }

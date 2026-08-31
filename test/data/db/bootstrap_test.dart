@@ -18,8 +18,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  Future<User> seed({String locale = 'ar'}) =>
-      bootstrap.ensureUser(locale: locale, displayName: 'Malik');
+  Future<User> seed({String? locale}) => bootstrap.ensureUser(locale: locale);
 
   Future<int> count(String table) async =>
       (await db.customSelect('SELECT count(*) c FROM $table').getSingle())
@@ -32,7 +31,7 @@ void main() {
       final User user = await seed();
 
       expect(await count('users'), 1);
-      expect(user.displayName, 'Malik');
+      expect(user.id, isNotEmpty);
     });
 
     test('the id is a UUIDv7, generated client-side', () async {
@@ -54,7 +53,19 @@ void main() {
       expect(user.deletedAt, isNull);
     });
 
-    test('the locale is the one passed in', () async {
+    test('seeds no locale preference, meaning follow the device', () async {
+      // Not the resolved device tag. This column stores the driver preference
+      // that syncs at V2, and a driver who has never opened the language
+      // setting has expressed none. Recording `ar` here because the handset
+      // happens to be Arabic would hand them Arabic on a French phone later.
+      expect((await seed()).locale, isNull);
+    });
+
+    test('seeds no display name, because nobody has been asked', () async {
+      expect((await seed()).displayName, isNull);
+    });
+
+    test('but an explicit preference is honoured when given', () async {
       expect((await seed(locale: 'fr')).locale, 'fr');
     });
 

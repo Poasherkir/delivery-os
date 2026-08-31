@@ -27,6 +27,29 @@ class Wilayas extends Table {
   /// has no PostGIS, so this is the index.
   TextColumn get geohash => text().nullable()();
 
+  /// True when a dataset update no longer lists this row.
+  ///
+  /// **The loader never deletes.** Administrative reform merges and renames
+  /// wilayas — 48 became 58 in 2019 and 69 in 2025 — and `customer_addresses`
+  /// holds foreign keys into this table. Deleting a row that a real customer
+  /// address points at would orphan it, and a loader that had to decide which
+  /// rows are safe to delete would carry a partial-delete policy nobody can
+  /// hold in their head.
+  ///
+  /// So retirement is a state rather than an absence, with defined behaviour on
+  /// each side:
+  ///
+  /// * **Pickers and search filter on `is_retired = false`** — nobody gets
+  ///   offered a wilaya that no longer exists.
+  /// * **Lookups by id ignore it entirely** — an address pointing at a merged
+  ///   wilaya still resolves and still renders its name, so old orders stay
+  ///   readable forever.
+  ///
+  /// Functional state, not an audit column: the same category as
+  /// `matrix_cache.fetched_at`, so it does not disturb invariant 3's
+  /// bundled-reference-data rule that this table carries no audit columns.
+  BoolColumn get isRetired => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{code};
 }
@@ -63,6 +86,16 @@ class Communes extends Table {
   /// it does not, nothing breaks and gate 2 degrades to a wilaya-scaled radius
   /// — weakest in the sparse south, where it matters least.
   TextColumn get boundary => text().nullable()();
+
+  /// True when a dataset update no longer lists this commune. See
+  /// [Wilayas.isRetired] for the full reasoning.
+  ///
+  /// Communes are where this earns its keep. The eleven wilayas created in
+  /// November 2025 were carved out of existing ones, so commune *shapes* did
+  /// not move but their *parent* did — a dataset predating the reform assigns
+  /// them to a wilaya that no longer exists. Retiring rather than deleting is
+  /// what lets the table absorb that without breaking a single stored address.
+  BoolColumn get isRetired => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};

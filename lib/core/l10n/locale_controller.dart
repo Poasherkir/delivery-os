@@ -57,15 +57,17 @@ class LocaleController extends Notifier<Locale?> {
     // is written anywhere — which is the outcome the ordering exists to
     // guarantee. Writing the cache first and then failing would leave a stored
     // choice the source of truth has never heard of.
-    if (locale != null) {
-      final UserSettings? settings = ref.read(userSettingsProvider);
-      // Null before the database opens, and null for good if it never does.
-      // A driver switching language on the "cannot be decrypted" screen is the
-      // case this tolerates: that write reaches preferences only, which is
-      // exactly as much as a broken database can honour.
-      if (settings != null) {
-        await settings.setLocale(locale.languageCode);
-      }
+    //
+    // Clearing the override is a write like any other: null goes to the
+    // database as null, because "follow the device" is a preference to record
+    // rather than the absence of one.
+    final UserSettings? settings = ref.read(userSettingsProvider);
+    // Null before the database opens, and null for good if it never does.
+    // A driver switching language on the "cannot be decrypted" screen is the
+    // case this tolerates: that write reaches preferences only, which is
+    // exactly as much as a broken database can honour.
+    if (settings != null) {
+      await settings.setLocale(locale?.languageCode);
     }
 
     final SharedPreferences prefs = ref.read(sharedPreferencesProvider);
@@ -90,30 +92,36 @@ class LocaleController extends Notifier<Locale?> {
       return;
     }
 
-    final String? stored = await settings.locale();
-    if (stored == null || stored == state?.languageCode) {
+    final LocalePreference? stored = await settings.localePreference();
+    if (stored == null) {
+      // No user row yet — the window between the database opening and
+      // bootstrap seeding. Nothing to reconcile against.
       return;
     }
 
-    // "Follow the device" is an instruction, not a value, and the database has
-    // no way to express it: `users.locale` is a non-null tag. So a concrete
-    // value there must not be allowed to manufacture an override the driver
-    // never chose — that would silently convert System into an explicit pick,
-    // and the driver would never get their device language back.
-    if (state == null) {
+    // A language the database names but this build no longer ships. Leave
+    // everything alone rather than clearing: same reasoning as `build`, where
+    // dropping a locale must not disrupt whoever had it selected.
+    if (stored.isExplicit && !AppLocales.isSupported(stored.tag!)) {
       return;
     }
 
-    // A language the database names but this build no longer ships. Leave the
-    // current choice alone rather than clearing it: same reasoning as `build`,
-    // where dropping a locale must not disrupt whoever had it selected.
-    if (!AppLocales.isSupported(stored)) {
+    // Both stores now hold the same datum — a preference, where null means
+    // "follow the device" — so the database wins in *both* directions and
+    // there is no special case for System. An explicit choice here overwrites
+    // a stale one in the cache, and a null here clears one.
+    final Locale? target = stored.isExplicit ? Locale(stored.tag!) : null;
+    if (target?.languageCode == state?.languageCode) {
       return;
     }
 
-    // The database wins. Correct the cache, then the UI.
-    await ref.read(sharedPreferencesProvider).setString(storageKey, stored);
-    state = Locale(stored);
+    final SharedPreferences prefs = ref.read(sharedPreferencesProvider);
+    if (target == null) {
+      await prefs.remove(storageKey);
+    } else {
+      await prefs.setString(storageKey, target.languageCode);
+    }
+    state = target;
   }
 }
 

@@ -40,7 +40,7 @@ void main() {
         .insert(
           UsersCompanion.insert(
             id: userId,
-            displayName: 'Malik',
+            displayName: const Value('Malik'),
             createdAt: stamp.createdAt,
             updatedAt: stamp.updatedAt,
           ),

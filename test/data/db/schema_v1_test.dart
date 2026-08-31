@@ -29,12 +29,19 @@ void main() {
 
   tearDown(() => db.close());
 
-  Future<void> insertUser({String id = _userId, PhoneE164? phone}) => db
+  // Name and locale default to absent: that is what bootstrap actually writes
+  // at first launch, so the helper models a real row rather than a convenient
+  // one. Tests that care about either pass it explicitly.
+  Future<void> insertUser({
+    String id = _userId,
+    PhoneE164? phone,
+    String? displayName,
+  }) => db
       .into(db.users)
       .insert(
         UsersCompanion.insert(
           id: id,
-          displayName: 'Malik',
+          displayName: Value<String?>(displayName),
           createdAt: stamp.createdAt,
           updatedAt: stamp.updatedAt,
           phone: Value<PhoneE164?>(phone),
@@ -196,7 +203,7 @@ void main() {
     test(
       'accepts a driver with no phone, because the MVP has no account',
       () async {
-        await insertUser();
+        await insertUser(displayName: 'Malik');
         final User row = await db.select(db.users).getSingle();
 
         expect(row.phone, isNull);
@@ -204,9 +211,25 @@ void main() {
       },
     );
 
-    test('defaults the locale to Arabic', () async {
+    test(
+      'starts with no locale preference, meaning follow the device',
+      () async {
+        // Not a default of `ar`. This column stores the driver's *preference*,
+        // and a fresh row has none — which is different from having chosen
+        // Arabic. The distinction is what makes the value safe to sync at V2: a
+        // driver who never touched the setting must get the new phone's language
+        // rather than the old phone's resolved tag.
+        await insertUser();
+        expect((await db.select(db.users).getSingle()).locale, isNull);
+      },
+    );
+
+    test('and no display name, because there is no signup', () async {
+      // Same reasoning as `phone` on the same table. A non-null column would
+      // force a placeholder, and a placeholder in a display field is one that
+      // eventually gets shown to someone.
       await insertUser();
-      expect((await db.select(db.users).getSingle()).locale, 'ar');
+      expect((await db.select(db.users).getSingle()).displayName, isNull);
     });
 
     test(
