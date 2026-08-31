@@ -127,3 +127,20 @@ class LocaleController extends Notifier<Locale?> {
 
 final NotifierProvider<LocaleController, Locale?> localeControllerProvider =
     NotifierProvider<LocaleController, Locale?>(LocaleController.new);
+
+/// Reconciles the cached locale against the database once startup succeeds.
+///
+/// Lives here rather than in `di.dart` to keep the dependency edges one-way:
+/// `userSettingsProvider` is derived from `startupProvider`, so anything that
+/// reconciles has to sit *downstream* of both. Reconciling from inside startup
+/// would be a cycle.
+///
+/// Never resolves if startup fails, which is correct — there is no source of
+/// truth to reconcile against, and the cached locale is the only thing keeping
+/// the failure screen readable.
+final FutureProvider<void> localeReconciliationProvider = FutureProvider<void>((
+  Ref ref,
+) async {
+  await ref.watch(startupProvider.future);
+  await ref.read(localeControllerProvider.notifier).reconcile();
+});
