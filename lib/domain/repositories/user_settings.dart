@@ -44,7 +44,7 @@ final class LocalePreference {
 ///
 /// Deliberately narrow and no `User` type. The only setting the MVP reconciles
 /// is the language; a richer interface would be inventing a shape for rows and
-/// fields that do not exist yet, which is the failure mode CONTRIBUTING.md
+/// fields that do not exist yet, which is the failure mode CLAUDE.md
 /// names outright.
 abstract interface class UserSettings {
   /// The stored preference, or null when no user row exists yet.
