@@ -295,3 +295,87 @@ and this user is tapping one-handed while holding a parcel.
 
 The twelve `features/` folders in `docs/ARCHITECTURE.md` §8.4 are a code layout,
 not a navigation design. Do not turn each one into a destination.
+
+---
+
+## How each rule is enforced
+
+**A rule in this file is loaded. It is not thereby enforced.** Loading means it
+has been read; a guard is what makes it impossible to violate. The distinction
+is not academic — the first version of `project_rules_test.dart` was written
+through a shell heredoc, by someone who had just read the no-heredoc rule and
+was at that moment writing a test asserting the rule was still present.
+
+Two uses for this table. A milestone gate should **not** re-verify the
+mechanical rows: they prove themselves on every `flutter test`, and auditing
+them is theatre. The audit is the soft rows, which is where the exposure is. And
+the ratio is worth seeing — anything soft is riding on care, and naming it is
+the first step to converting it, exactly as the forbidden-vocabulary guard was a
+soft copy decision until it became a test.
+
+**Soft is not a failure grade.** Some rules cannot have a guard: they are about
+tool choice, sequencing, or judgement. Those stay soft permanently and that is
+the correct answer for them.
+
+### Invariants
+
+| # | Enforced by |
+|---|---|
+| 1 Money is `int` centimes | `test/domain/value_objects/centimes_test.dart` (no `double`, no division), `test/data/db/schema_v1_ledger_test.dart` (column types). **One-rounded-value: soft** — no money engine before M3 |
+| 2 UUIDv7, client-side | `test/core/utils/uuid_v7_test.dart`. **No guard forbids `autoIncrement()`** — convertible |
+| 3 Five-category audit columns | `test/data/db/schema_v1_test.dart` — five tables plus the reference tables. **The all-20-table sweep is soft**: the M0-gate script was a throwaway and was deleted. Convertible |
+| 4 `domain/` imports nothing | `test/architecture/domain_purity_test.dart` — allowlist, fails closed |
+| 5 Transaction + outbox row | Per site: `test/data/db/bootstrap_test.dart`, `test/data/db/daos/user_settings_dao_test.dart`, `test/data/geo/geo_loader_test.dart`. **No global guard** that a *new* writer queues one — convertible |
+| 6 `OrderStateMachine` | Not built (M2) |
+| 7 Settlements immutable | `test/data/db/schema_v1_ledger_test.dart` — structural, the columns do not exist |
+| 8 `payment_rule_version` pinned | `test/data/db/schema_v1_orders_test.dart` for the column. **Pinning logic: soft** until M3 |
+| 9 Confidence tiers | `test/domain/value_objects/geo_confidence_test.dart`. "Never route a 0" has no router yet |
+| 10 AR/FR, no hardcoded strings | `test/architecture/no_raw_text_test.dart`, `test/core/l10n/arb_parity_test.dart`, `test/widget/rtl_mirroring_test.dart` |
+| 11 No background location | **soft** — nothing asserts the manifest declares no permissions. Convertible |
+| 12 Routing behind interfaces | Not built (M4) |
+
+### PII in diagnostics
+
+| Rule | Enforced by |
+|---|---|
+| Masked `toString`, no PII in exceptions | `test/domain/value_objects/phone_e164_test.dart`, `test/domain/value_objects/geo_point_test.dart` |
+| Forbidden vocabulary in driver-facing copy | `test/widget/database_error_screen_test.dart` |
+
+### Workflow
+
+| Rule | Enforced by |
+|---|---|
+| Schema change needs a migration test | `test/data/db/migration_harness_test.dart` |
+| Table change regenerates the dump | `test/data/db/migration_harness_test.dart` — divergence guard |
+| Dependency major bump: re-read defaults | `test/data/db/encryption/secure_key_store_test.dart` pins the one known case. **The general rule: soft** |
+| Session-bootstrap files | `test/architecture/project_rules_test.dart` — partial; a test cannot prove the file is *loaded* |
+| Plan before coding | soft — judgement |
+| One concern per commit | soft — judgement |
+| Work only inside the milestone | soft — judgement |
+| Ask about domain rules | soft — judgement |
+| Never pipe a gate command | soft — tool choice |
+| Formatting vs checking | soft — tool choice |
+| Codepoints, never pasted | soft — **convertible**: scan string literals for non-ASCII |
+| Write tool, never a heredoc | soft — tool choice |
+| Never `git add -A` | soft — tool choice |
+| Amend only while unpushed | soft — judgement |
+
+### Testing bar
+
+| Rule | Enforced by |
+|---|---|
+| No test that passes against an empty implementation | soft — judgement. Three caught by review so far |
+| Money expectations derived independently | soft — judgement |
+| Locale set explicitly in widget tests | soft — **convertible**: scan `testWidgets` bodies for a locale |
+| `lib/domain/` 90%+ coverage | **soft, and not gated in CI.** Measured by hand at the M0 gate. Convertible |
+| Money engine property tests | soft until M3 |
+
+### UI
+
+| Rule | Enforced by |
+|---|---|
+| Five bottom-nav destinations | `test/widget/router_test.dart` |
+| Dark and light both real | `test/core/theme/app_theme_test.dart` |
+| Minimum 48dp tap target | partial — `test/widget/database_error_screen_test.dart` only. Convertible |
+| Next action is the largest thing | soft — judgement |
+| No gradients, glassmorphism, neon | soft — judgement |
