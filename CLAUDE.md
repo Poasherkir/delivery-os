@@ -211,12 +211,21 @@ when the first integration test exists, and not before.
 
 ## Testing bar
 
-- **A test that would pass against an empty implementation is not a test.**
-  Before writing the assertion, ask what it would do if the thing under test did
-  nothing at all. Three have been caught this way already: a widget test that
-  replaced the whole tree with a `SizedBox` and asserted no exception, an Arabic
-  test that compared a title against the string `'fr'`, and a money test whose
-  expected value came from the same reasoning as the implementation.
+- **A test that would pass against an empty implementation is not a test, and a
+  check that would pass against an empty subject set is not a check.**
+
+  The first clause: before writing the assertion, ask what it would do if the
+  thing under test did nothing at all. Three caught this way — a widget test
+  that replaced the whole tree with a `SizedBox` and asserted no exception, an
+  Arabic test that compared a title against the string `'fr'`, and a money test
+  whose expected value came from the same reasoning as the implementation.
+
+  The second: ask what it does when it finds *nothing to look at*. A scan whose
+  glob stops matching, a coverage gate whose path moved, `flutter test` against
+  an empty `integration_test/` — each reports success while checking nothing,
+  and stays green forever because the subject set never comes back. Three caught
+  this way too, which is why it is here: assert the subject set is non-empty, or
+  fail when it is.
 
   **Where it is cheap, prove the test by breaking the thing it guards.** Plant a
   real violation, watch the test fail, revert, confirm no residue. That is how
