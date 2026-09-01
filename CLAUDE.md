@@ -182,6 +182,14 @@ when the first integration test exists, and not before.
   commit silently swallow another concern's work — a docs commit absorbing a
   whole task's implementation — which defeats the point of splitting commits by
   concern at all. `git status` before every commit, and name what goes in.
+- **A script written to verify an invariant during an audit becomes a test in
+  that same commit, or the report says explicitly why it is a one-off.** An
+  audit that proves something and leaves nothing behind is a measurement, not a
+  guard. The M0 gate verified all twenty tables against invariant 3 with a
+  throwaway script, printed `CATEGORY VIOLATIONS: none`, and deleted it — so
+  every table written afterwards was unguarded, and the enforcement table said
+  the invariant was mechanical when it was not. If a property was worth
+  checking once by hand, the reason it was worth checking has not gone away.
 - **A change to a session-bootstrap file cannot be verified by the session that
   makes it.** This file, skills, tool configuration — anything read at
   startup — takes effect on the *next* session. The current one already holds
@@ -322,8 +330,8 @@ the correct answer for them.
 | # | Enforced by |
 |---|---|
 | 1 Money is `int` centimes | `test/domain/value_objects/centimes_test.dart` (no `double`, no division), `test/data/db/schema_v1_ledger_test.dart` (column types). **One-rounded-value: soft** — no money engine before M3 |
-| 2 UUIDv7, client-side | `test/core/utils/uuid_v7_test.dart`. **No guard forbids `autoIncrement()`** — convertible |
-| 3 Five-category audit columns | `test/data/db/schema_v1_test.dart` — five tables plus the reference tables. **The all-20-table sweep is soft**: the M0-gate script was a throwaway and was deleted. Convertible |
+| 2 UUIDv7, client-side | `test/core/utils/uuid_v7_test.dart`, `test/architecture/no_autoincrement_test.dart` |
+| 3 Five-category audit columns | `test/data/db/table_categories_test.dart` — all twenty, plus a check that a new table fails until it is categorised |
 | 4 `domain/` imports nothing | `test/architecture/domain_purity_test.dart` — allowlist, fails closed |
 | 5 Transaction + outbox row | Per site: `test/data/db/bootstrap_test.dart`, `test/data/db/daos/user_settings_dao_test.dart`, `test/data/geo/geo_loader_test.dart`. **No global guard** that a *new* writer queues one — convertible |
 | 6 `OrderStateMachine` | Not built (M2) |
@@ -331,7 +339,7 @@ the correct answer for them.
 | 8 `payment_rule_version` pinned | `test/data/db/schema_v1_orders_test.dart` for the column. **Pinning logic: soft** until M3 |
 | 9 Confidence tiers | `test/domain/value_objects/geo_confidence_test.dart`. "Never route a 0" has no router yet |
 | 10 AR/FR, no hardcoded strings | `test/architecture/no_raw_text_test.dart`, `test/core/l10n/arb_parity_test.dart`, `test/widget/rtl_mirroring_test.dart` |
-| 11 No background location | **soft** — nothing asserts the manifest declares no permissions. Convertible |
+| 11 No background location | `test/architecture/android_permissions_test.dart` — permission allowlist (empty today), a separate forbidden list, and no foreground-service type or receiver |
 | 12 Routing behind interfaces | Not built (M4) |
 
 ### PII in diagnostics
@@ -349,6 +357,7 @@ the correct answer for them.
 | Table change regenerates the dump | `test/data/db/migration_harness_test.dart` — divergence guard |
 | Dependency major bump: re-read defaults | `test/data/db/encryption/secure_key_store_test.dart` pins the one known case. **The general rule: soft** |
 | Session-bootstrap files | `test/architecture/project_rules_test.dart` — partial; a test cannot prove the file is *loaded* |
+| Audit scripts become tests | soft — judgement |
 | Plan before coding | soft — judgement |
 | One concern per commit | soft — judgement |
 | Work only inside the milestone | soft — judgement |
@@ -367,7 +376,7 @@ the correct answer for them.
 | No test that passes against an empty implementation | soft — judgement. Three caught by review so far |
 | Money expectations derived independently | soft — judgement |
 | Locale set explicitly in widget tests | soft — **convertible**: scan `testWidgets` bodies for a locale |
-| `lib/domain/` 90%+ coverage | **soft, and not gated in CI.** Measured by hand at the M0 gate. Convertible |
+| `lib/domain/` 90%+ coverage | `tool/check_domain_coverage.dart`, run in CI after `flutter test --coverage` |
 | Money engine property tests | soft until M3 |
 
 ### UI

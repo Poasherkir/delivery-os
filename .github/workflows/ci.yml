@@ -83,7 +83,15 @@ jobs:
         run: flutter analyze --fatal-infos
 
       - name: Test
-        run: flutter test
+        run: flutter test --coverage
+
+      # The 90% bar for lib/domain/ was a rule with nothing enforcing it until
+      # now — measured by hand once, at the M0 gate, and never again. 90 rather
+      # than the 100 we currently sit at: a 100 gate turns every newly written
+      # uncovered line into a red build, which produces pressure to write tests
+      # that move a number rather than catch a defect.
+      - name: Domain coverage
+        run: dart run tool/check_domain_coverage.dart
 
       # No artifact upload. The build succeeding is the gate; a 146 MB fat
       # unshrunk debug APK is not something you would hand a field tester, and
