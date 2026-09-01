@@ -1,7 +1,3 @@
-import 'dart:io';
-
-import 'package:test/test.dart';
-
 /// `CLAUDE.md` is the only file with a hard loading guarantee, so it is the only
 /// file allowed to hold anything load-bearing.
 ///
@@ -18,6 +14,30 @@ import 'package:test/test.dart';
 /// What this can and cannot do: it fails if the file is renamed, moved, or
 /// loses a rule. It cannot tell you the file is being *read* at session start —
 /// no test can. That half is the reporting rule in the workflow section.
+library;
+
+import 'dart:io';
+
+import 'package:test/test.dart';
+
+/// What makes a file a rules document rather than one that mentions a rule.
+///
+/// Section headings, plus the normative lead-in of a rule stated as an
+/// instruction. Summarising a constraint in prose and pointing at CLAUDE.md
+/// does not trip these; copying the rule does.
+const List<String> _rulesDocumentMarkers = <String>[
+  '## Non-negotiable invariants',
+  '## PII in diagnostics',
+  '## Testing bar',
+  '## Explicitly out of scope',
+  'Never pipe a gate command',
+  'Never `git add -A`',
+  'Amend freely while unpushed, never after',
+  'Formatting and checking are two different commands',
+  'A test that would pass against an empty implementation',
+  'Write files with the Write tool, never a shell heredoc',
+];
+
 void main() {
   late String rules;
 
@@ -101,17 +121,49 @@ void main() {
     });
   });
 
-  test('no second file holds rules', () {
-    // "Either disappears or becomes a genuine contributor document that holds
-    // no rules at all. Not both." Two files holding rules is worse than either
-    // alone: the next person adds to whichever they happen to open, and the
-    // two drift apart with nothing to notice.
+  test('no other file in the repository holds rules', () {
+    // Inverted from a check that only forbade the name CONTRIBUTING.md — the
+    // same denylist mistake the import guard replaced at M0-12. A denylist of
+    // one name lets RULES.md, GUIDELINES.md or docs/process.md through, and the
+    // property wanted is "there is one rules document", not "one particular
+    // filename is absent".
+    //
+    // Scans every tracked text file for the markers that make a file a rules
+    // document. A README summarising a constraint and pointing here is fine;
+    // restating one normatively is a second place to look, and the two drift
+    // with nothing to notice.
+    final List<String> offenders = <String>[];
+
+    for (final FileSystemEntity entity in Directory(
+      '.',
+    ).listSync(recursive: true, followLinks: false)) {
+      if (entity is! File) {
+        continue;
+      }
+      final String path = entity.path.replaceAll(r'\', '/');
+      if (!path.endsWith('.md') ||
+          path.contains('/build/') ||
+          path.contains('/.git/') ||
+          path.contains('/.dart_tool/') ||
+          path.endsWith('/CLAUDE.md') ||
+          path == './CLAUDE.md') {
+        continue;
+      }
+
+      final String text = entity.readAsStringSync();
+      for (final String marker in _rulesDocumentMarkers) {
+        if (text.contains(marker)) {
+          offenders.add('$path contains "$marker"');
+        }
+      }
+    }
+
     expect(
-      File('CONTRIBUTING.md').existsSync(),
-      isFalse,
+      offenders,
+      isEmpty,
       reason:
-          'CONTRIBUTING.md is back. If it is meant to exist it must hold no '
-          'rules, and this test must be updated to say so deliberately.',
+          'these files restate rules that belong only in CLAUDE.md: '
+          '${offenders.join('; ')}',
     );
   });
 

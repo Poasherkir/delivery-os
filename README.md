@@ -188,10 +188,11 @@ To check formatting without writing (what CI runs):
 dart format --output=none --set-exit-if-changed .
 ```
 
-> **Never pipe a gate command.** `flutter analyze | tail -3` reports the exit
-> code of `tail`, so a failing gate passes silently. The same is true of
-> `| head`, `| grep` and `| tee`. If a pipe is genuinely unavoidable, set
-> `pipefail` first and echo the real exit code.
+> There are two ways to run these and have them silently check nothing: piping
+> them, which reports the exit code of the last command in the pipe, and
+> confusing `dart format` with its `--output=none` check mode, which writes no
+> files. Both have already cost this project a bad commit. The rules are in
+> [`CLAUDE.md`](CLAUDE.md), which is the only place they are stated.
 
 ---
 
