@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/device/device_id_store.dart';
 import '../core/time/clock.dart';
 import '../core/utils/uuid_v7.dart';
+import '../data/db/daos/customer_dao.dart';
 import '../data/db/daos/user_settings_dao.dart';
 import '../data/db/database_location.dart';
 import '../data/db/encryption/database_key.dart';
@@ -17,6 +18,8 @@ import '../data/db/encryption/secure_key_store.dart';
 import '../data/geo/bundled_geo_assets.dart';
 import '../data/geo/geo_hydration.dart';
 import '../data/geo/geo_loader.dart';
+import '../data/repositories/drift_customer_repository.dart';
+import '../domain/repositories/customer_repository.dart';
 import '../domain/repositories/user_settings.dart';
 import 'startup.dart';
 
@@ -164,6 +167,30 @@ final FutureProvider<GeoLoadReport?> geoHydrationProvider =
         assets: ref.watch(geoAssetsProvider),
         preferences: ref.watch(sharedPreferencesProvider),
       ).ensureLoaded(started.database);
+    });
+
+/// Customers, as `features/` sees them — **null until the database is open**.
+///
+/// Same contract as [userSettingsProvider] and for the same reason: this is
+/// derived from startup rather than overridden, so it becomes non-null when the
+/// database does and stays null when it fails. A screen that reads it must
+/// handle null rather than assuming a database exists.
+final Provider<CustomerRepository?> customerRepositoryProvider =
+    Provider<CustomerRepository?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      if (started == null) {
+        return null;
+      }
+
+      return DriftCustomerRepository(
+        dao: CustomerDao(
+          database: started.database,
+          clock: ref.watch(clockProvider),
+          uuid: ref.watch(uuidProvider),
+          deviceId: started.deviceId,
+        ),
+        ownerId: started.user.id,
+      );
     });
 
 /// The database-backed settings store — **null until the database is open**.

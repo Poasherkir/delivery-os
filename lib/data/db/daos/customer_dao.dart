@@ -75,6 +75,48 @@ final class CustomerDao {
         .get();
   }
 
+  /// The stored row, or null if it is gone.
+  Future<Customer?> byId(String id) => (_db.select(
+    _db.customers,
+  )..where(($CustomersTable c) => c.id.equals(id))).getSingleOrNull();
+
+  /// Free-text search over name and number.
+  ///
+  /// **Provisional: a LIKE scan.** Correct and adequate at a few hundred
+  /// customers, and it degrades linearly after that. The real answer is an
+  /// FTS5 virtual table with sync triggers (§6.3 has no SQLite equivalent for
+  /// the Postgres trigram index), which is its own task — building it here
+  /// would mean a virtual table and its triggers arriving inside a screen
+  /// commit.
+  ///
+  /// Raw SQL because the phone columns carry a type converter, and matching a
+  /// substring of a converted value through the typed API means fighting it.
+  /// The stored form is TEXT either way.
+  ///
+  /// Searches `phone_raw` too, which matters more than it looks: a customer
+  /// whose number never parsed is exactly the one a driver will go looking for
+  /// by typing the digits off the parcel.
+  Future<List<Customer>> search({
+    required String ownerId,
+    required String query,
+  }) {
+    final String like = '%${query.toLowerCase()}%';
+    return _db
+        .customSelect(
+          'SELECT * FROM customers WHERE owner_id = ?1 AND deleted_at IS NULL '
+          'AND (lower(display_name) LIKE ?2 OR lower(phone_e164) LIKE ?2 '
+          'OR lower(phone_raw) LIKE ?2) '
+          'ORDER BY created_at, id',
+          variables: <Variable<Object>>[
+            Variable<String>(ownerId),
+            Variable<String>(like),
+          ],
+          readsFrom: <ResultSetImplementation<Table, Object?>>{_db.customers},
+        )
+        .map((QueryRow row) => _db.customers.map(row.data))
+        .get();
+  }
+
   /// Creates a customer. Returns the stored row.
   ///
   /// Throws when the owner already has a live customer on this number — the
