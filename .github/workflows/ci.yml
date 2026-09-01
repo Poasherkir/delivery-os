@@ -93,6 +93,26 @@ jobs:
       - name: Domain coverage
         run: dart run tool/check_domain_coverage.dart
 
+      # Inert until the first release build, which is M5, and that is fine —
+      # it needs to exist before that build, not before the first commit.
+      #
+      # The bundled geography is currently the three-wilaya FIXTURE. Shipping
+      # it would give a driver an address picker containing three provinces and
+      # four communes, with no error anywhere to say so. A unit test cannot
+      # carry this check: asserting the version is not `fixture-` would fail
+      # today, when the fixture is exactly what is bundled and correctly so.
+      - name: Real geography dataset (release only)
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        run: |
+          version=$(python3 -c "import json;print(json.load(open('assets/geo/wilayas.json'))['version'])")
+          echo "bundled geography version: $version"
+          case "$version" in
+            fixture-*)
+              echo "::error::the fixture geography dataset cannot ship in a release build"
+              exit 1
+              ;;
+          esac
+
       # No artifact upload. The build succeeding is the gate; a 146 MB fat
       # unshrunk debug APK is not something you would hand a field tester, and
       # it is cheaper to build locally. A release APK upload returns at M5,

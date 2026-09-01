@@ -81,6 +81,18 @@ final class GeoDataset {
   final List<WilayaRecord> wilayas;
   final List<CommuneRecord> communes;
 
+  /// The version of the wilayas file, without touching the communes file.
+  ///
+  /// Exists so a launch that has nothing to do can decide that cheaply. The
+  /// wilayas file is 69 rows; the communes file is roughly 1,541 and may carry
+  /// boundary polygons, so decoding it on every cold start to discover there is
+  /// no work would be the single most expensive thing startup does — on a 2 GB
+  /// phone, for nothing.
+  static String peekVersion(String wilayasJson) => _requiredString(
+    _object(wilayasJson, 'wilayas file')['version'],
+    'wilayas file "version"',
+  );
+
   /// Parses both files together, because the commune → wilaya foreign key
   /// cannot be checked from either one alone.
   ///

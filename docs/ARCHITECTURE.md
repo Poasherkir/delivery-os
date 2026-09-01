@@ -1704,6 +1704,22 @@ does not solve it — the artifact handed around has to be small by itself.
 - `armeabi-v7a` — older hardware, which this market still has plenty of
 - `x86_64` — emulator only. Not shipped.
 
+**The release checklist, hard lines.**
+
+- **The bundled geography must be the real dataset, not the fixture.** M1-00
+  ships `assets/geo/*.json` holding three wilayas and four communes, versioned
+  `fixture-1`, so the startup path could be exercised on a device before the
+  real file existed. Shipping it would hand a driver an address picker
+  containing three provinces, with nothing anywhere to say so. A CI step on
+  tagged builds fails when the bundled version still starts with `fixture-`;
+  this line is the same rule in words, because a CI step can be skipped and a
+  checklist item is read by a person.
+- **The wilaya structure is settled against a real bordereau**, not the Journal
+  Officiel — §1.5. A dataset matching the state's 69 while every carrier still
+  prices by 58 is wrong for this app regardless of which is administratively
+  correct.
+- **`targetSdk` re-checked from the built APK**, not from the Gradle file.
+
 
 39. Home dashboard assembling batch progress, next stop, money, and route summary.
 40. History list and day drill-down.

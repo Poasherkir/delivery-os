@@ -20,9 +20,13 @@ class DeliveryOsApp extends ConsumerWidget {
     final Locale? override = ref.watch(localeControllerProvider);
     final AsyncValue<StartupResult> startup = ref.watch(startupProvider);
 
-    // Watched, not read: this is what triggers reconciliation once the
-    // database is up. Its own failure is already represented by `startup`.
+    // Watched, not read: these are what trigger the work that follows a
+    // successful open. Their own failures are not startup failures — a
+    // geography load that fails leaves a working app with an empty commune
+    // picker, which is M1's problem to surface, not a reason to show the
+    // "cannot be opened" screen.
     ref.watch(localeReconciliationProvider);
+    ref.watch(geoHydrationProvider);
 
     // When the database will not open there is no navigation to do — no shell,
     // no destinations, one screen. Rendering it as `home` rather than as a

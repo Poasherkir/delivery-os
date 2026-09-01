@@ -76,6 +76,18 @@ flutter:
   assets:
     - assets/fonts/OFL.txt
 
+    # Algeria's wilayas and communes, bundled rather than fetched: this app
+    # makes no network call before M4, and an address picker that needs signal
+    # is an address picker that fails in a stairwell.
+    #
+    # These currently hold the three-wilaya FIXTURE, versioned `fixture-1`.
+    # It is real data for three wilayas, not invented rows, and it is here so
+    # the startup path can be exercised end to end on a device before the real
+    # dataset exists. A CI step blocks any release build whose bundled version
+    # still starts with `fixture-`.
+    - assets/geo/wilayas.json
+    - assets/geo/communes.json
+
   # IBM Plex Sans + IBM Plex Sans Arabic, bundled rather than fetched. This app
   # is offline-first: a runtime font download (google_fonts) would leave the AR
   # UI in a fallback face for any driver who first opens it without signal.

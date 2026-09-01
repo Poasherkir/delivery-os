@@ -14,6 +14,9 @@ import '../data/db/encryption/database_key.dart';
 import '../data/db/encryption/database_reset.dart';
 import '../data/db/encryption/encrypted_database.dart';
 import '../data/db/encryption/secure_key_store.dart';
+import '../data/geo/bundled_geo_assets.dart';
+import '../data/geo/geo_hydration.dart';
+import '../data/geo/geo_loader.dart';
 import '../domain/repositories/user_settings.dart';
 import 'startup.dart';
 
@@ -137,6 +140,30 @@ final FutureProvider<StartupResult> startupProvider =
 
       ref.onDispose(result.database.close);
       return result;
+    });
+
+/// Where the bundled geography files are read from. Overridden in tests, which
+/// cannot reach `rootBundle`.
+final Provider<GeoAssetSource> geoAssetsProvider = Provider<GeoAssetSource>(
+  (Ref ref) => const BundledGeoAssets(),
+);
+
+/// Loads the bundled geography once startup succeeds.
+///
+/// Downstream of [startupProvider] rather than part of it, and deliberately so:
+/// a geography failure is not a database failure. If this throws, the driver
+/// gets an app that works with an empty commune picker, not the
+/// "cannot be opened" screen — which would be false, since the database opened
+/// fine. Surfacing it belongs with the picker in M1.
+///
+/// Usually does nothing. See [GeoHydration.ensureLoaded].
+final FutureProvider<GeoLoadReport?> geoHydrationProvider =
+    FutureProvider<GeoLoadReport?>((Ref ref) async {
+      final StartupResult started = await ref.watch(startupProvider.future);
+      return GeoHydration(
+        assets: ref.watch(geoAssetsProvider),
+        preferences: ref.watch(sharedPreferencesProvider),
+      ).ensureLoaded(started.database);
     });
 
 /// The database-backed settings store — **null until the database is open**.
