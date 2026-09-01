@@ -388,7 +388,7 @@ the correct answer for them.
 | 2 UUIDv7, client-side | `test/core/utils/uuid_v7_test.dart`, `test/architecture/no_autoincrement_test.dart` |
 | 3 Five-category audit columns | `test/data/db/table_categories_test.dart` — all twenty, plus a check that a new table fails until it is categorised |
 | 4 `domain/` imports nothing | `test/architecture/domain_purity_test.dart` — allowlist, fails closed |
-| 5 Transaction + outbox row | Per site: `test/data/db/bootstrap_test.dart`, `test/data/db/daos/user_settings_dao_test.dart`, `test/data/geo/geo_loader_test.dart`. **No global guard** that a *new* writer queues one — convertible |
+| 5 Transaction + outbox row | `test/architecture/outbox_guard_test.dart` — scans `daos/` for writers, then invokes each and asserts the queue grew by one. A writer with no registry entry fails by name |
 | 6 `OrderStateMachine` | Not built (M2) |
 | 7 Settlements immutable | `test/data/db/schema_v1_ledger_test.dart` — structural, the columns do not exist |
 | 8 `payment_rule_version` pinned | `test/data/db/schema_v1_orders_test.dart` for the column. **Pinning logic: soft** until M3 |
