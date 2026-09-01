@@ -2898,14 +2898,29 @@ class $CustomersTable extends Customers
     requiredDuringInsert: true,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<PhoneE164, String> phoneE164 =
+  late final GeneratedColumnWithTypeConverter<PhoneE164?, String> phoneE164 =
       GeneratedColumn<String>(
         'phone_e164',
         aliasedName,
-        false,
+        true,
         type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<PhoneE164>($CustomersTable.$converterphoneE164);
+        requiredDuringInsert: false,
+      ).withConverter<PhoneE164?>($CustomersTable.$converterphoneE164n);
+  static const VerificationMeta _phoneRawMeta = const VerificationMeta(
+    'phoneRaw',
+  );
+  @override
+  late final GeneratedColumn<String> phoneRaw = GeneratedColumn<String>(
+    'phone_raw',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 40,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   late final GeneratedColumnWithTypeConverter<PhoneE164?, String> phoneAlt =
       GeneratedColumn<String>(
@@ -3003,6 +3018,7 @@ class $CustomersTable extends Customers
     deletedAt,
     version,
     phoneE164,
+    phoneRaw,
     phoneAlt,
     displayName,
     notes,
@@ -3044,6 +3060,12 @@ class $CustomersTable extends Customers
       );
     } else if (isInserting) {
       context.missing(_versionMeta);
+    }
+    if (data.containsKey('phone_raw')) {
+      context.handle(
+        _phoneRawMeta,
+        phoneRaw.isAcceptableOrUnknown(data['phone_raw']!, _phoneRawMeta),
+      );
     }
     if (data.containsKey('display_name')) {
       context.handle(
@@ -3128,11 +3150,15 @@ class $CustomersTable extends Customers
         DriftSqlType.int,
         data['${effectivePrefix}version'],
       )!,
-      phoneE164: $CustomersTable.$converterphoneE164.fromSql(
+      phoneE164: $CustomersTable.$converterphoneE164n.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}phone_e164'],
-        )!,
+        ),
+      ),
+      phoneRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone_raw'],
       ),
       phoneAlt: $CustomersTable.$converterphoneAltn.fromSql(
         attachedDatabase.typeMapping.read(
@@ -3190,6 +3216,8 @@ class $CustomersTable extends Customers
       NullAwareTypeConverter.wrap($converterdeletedAt);
   static TypeConverter<PhoneE164, String> $converterphoneE164 =
       const PhoneE164Converter();
+  static TypeConverter<PhoneE164?, String?> $converterphoneE164n =
+      NullAwareTypeConverter.wrap($converterphoneE164);
   static TypeConverter<PhoneE164, String> $converterphoneAlt =
       const PhoneE164Converter();
   static TypeConverter<PhoneE164?, String?> $converterphoneAltn =
@@ -3217,9 +3245,33 @@ class Customer extends DataClass implements Insertable<Customer> {
   /// Incremented on every write. Starts at 1.
   final int version;
 
-  /// The identity key. Normalized to `+213XXXXXXXXX` on the way in, so every
-  /// spelling of one number collapses to one row.
-  final PhoneE164 phoneE164;
+  /// The identity key when it parses. Normalized to `+213XXXXXXXXX` on the way
+  /// in, so every spelling of one number collapses to one row.
+  ///
+  /// **Nullable, because the validator does not get to end a driver's
+  /// morning.** A number that fails to parse must not block order creation
+  /// (M1 notes, settled at M0-09): the entry flow saves and fixes later. This
+  /// matters most for landlines — `PhoneE164.nationalLength` assumes nine
+  /// significant digits, and Algeria's pre-2008 landline formats were shorter,
+  /// so a real customer can be rejected by a rule that is merely out of date.
+  ///
+  /// The partial unique index is unaffected: SQLite permits many nulls in a
+  /// unique index, so any number of unparsed customers coexist while parsed
+  /// ones stay unique per owner.
+  final PhoneE164? phoneE164;
+
+  /// What the driver actually typed, kept verbatim when it did not parse.
+  ///
+  /// Exactly one of this and [phoneE164] is set, enforced by a CHECK rather
+  /// than by convention — see [customConstraints]. That makes "this customer
+  /// needs their number corrected" derivable (`phoneE164 == null`) rather than
+  /// a third column that can disagree with the other two.
+  ///
+  /// Deliberately unnormalized and unvalidated. Whatever is here is what was on
+  /// the parcel, and it is the only evidence of the real number: rewriting it
+  /// into a shape our parser likes would destroy the thing a human needs to see
+  /// when they fix it.
+  final String? phoneRaw;
 
   /// A second number for the same person. Normalized too, but not part of the
   /// identity: nothing joins or de-duplicates on it.
@@ -3243,7 +3295,8 @@ class Customer extends DataClass implements Insertable<Customer> {
     required this.updatedAt,
     this.deletedAt,
     required this.version,
-    required this.phoneE164,
+    this.phoneE164,
+    this.phoneRaw,
     this.phoneAlt,
     required this.displayName,
     this.notes,
@@ -3274,10 +3327,13 @@ class Customer extends DataClass implements Insertable<Customer> {
       );
     }
     map['version'] = Variable<int>(version);
-    {
+    if (!nullToAbsent || phoneE164 != null) {
       map['phone_e164'] = Variable<String>(
-        $CustomersTable.$converterphoneE164.toSql(phoneE164),
+        $CustomersTable.$converterphoneE164n.toSql(phoneE164),
       );
+    }
+    if (!nullToAbsent || phoneRaw != null) {
+      map['phone_raw'] = Variable<String>(phoneRaw);
     }
     if (!nullToAbsent || phoneAlt != null) {
       map['phone_alt'] = Variable<String>(
@@ -3314,7 +3370,12 @@ class Customer extends DataClass implements Insertable<Customer> {
           ? const Value.absent()
           : Value(deletedAt),
       version: Value(version),
-      phoneE164: Value(phoneE164),
+      phoneE164: phoneE164 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phoneE164),
+      phoneRaw: phoneRaw == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phoneRaw),
       phoneAlt: phoneAlt == null && nullToAbsent
           ? const Value.absent()
           : Value(phoneAlt),
@@ -3344,7 +3405,8 @@ class Customer extends DataClass implements Insertable<Customer> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       version: serializer.fromJson<int>(json['version']),
-      phoneE164: serializer.fromJson<PhoneE164>(json['phoneE164']),
+      phoneE164: serializer.fromJson<PhoneE164?>(json['phoneE164']),
+      phoneRaw: serializer.fromJson<String?>(json['phoneRaw']),
       phoneAlt: serializer.fromJson<PhoneE164?>(json['phoneAlt']),
       displayName: serializer.fromJson<String>(json['displayName']),
       notes: serializer.fromJson<String?>(json['notes']),
@@ -3365,7 +3427,8 @@ class Customer extends DataClass implements Insertable<Customer> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'version': serializer.toJson<int>(version),
-      'phoneE164': serializer.toJson<PhoneE164>(phoneE164),
+      'phoneE164': serializer.toJson<PhoneE164?>(phoneE164),
+      'phoneRaw': serializer.toJson<String?>(phoneRaw),
       'phoneAlt': serializer.toJson<PhoneE164?>(phoneAlt),
       'displayName': serializer.toJson<String>(displayName),
       'notes': serializer.toJson<String?>(notes),
@@ -3384,7 +3447,8 @@ class Customer extends DataClass implements Insertable<Customer> {
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
     int? version,
-    PhoneE164? phoneE164,
+    Value<PhoneE164?> phoneE164 = const Value.absent(),
+    Value<String?> phoneRaw = const Value.absent(),
     Value<PhoneE164?> phoneAlt = const Value.absent(),
     String? displayName,
     Value<String?> notes = const Value.absent(),
@@ -3400,7 +3464,8 @@ class Customer extends DataClass implements Insertable<Customer> {
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     version: version ?? this.version,
-    phoneE164: phoneE164 ?? this.phoneE164,
+    phoneE164: phoneE164.present ? phoneE164.value : this.phoneE164,
+    phoneRaw: phoneRaw.present ? phoneRaw.value : this.phoneRaw,
     phoneAlt: phoneAlt.present ? phoneAlt.value : this.phoneAlt,
     displayName: displayName ?? this.displayName,
     notes: notes.present ? notes.value : this.notes,
@@ -3421,6 +3486,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       version: data.version.present ? data.version.value : this.version,
       phoneE164: data.phoneE164.present ? data.phoneE164.value : this.phoneE164,
+      phoneRaw: data.phoneRaw.present ? data.phoneRaw.value : this.phoneRaw,
       phoneAlt: data.phoneAlt.present ? data.phoneAlt.value : this.phoneAlt,
       displayName: data.displayName.present
           ? data.displayName.value
@@ -3452,6 +3518,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           ..write('deletedAt: $deletedAt, ')
           ..write('version: $version, ')
           ..write('phoneE164: $phoneE164, ')
+          ..write('phoneRaw: $phoneRaw, ')
           ..write('phoneAlt: $phoneAlt, ')
           ..write('displayName: $displayName, ')
           ..write('notes: $notes, ')
@@ -3473,6 +3540,7 @@ class Customer extends DataClass implements Insertable<Customer> {
     deletedAt,
     version,
     phoneE164,
+    phoneRaw,
     phoneAlt,
     displayName,
     notes,
@@ -3493,6 +3561,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           other.deletedAt == this.deletedAt &&
           other.version == this.version &&
           other.phoneE164 == this.phoneE164 &&
+          other.phoneRaw == this.phoneRaw &&
           other.phoneAlt == this.phoneAlt &&
           other.displayName == this.displayName &&
           other.notes == this.notes &&
@@ -3510,7 +3579,8 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
   final Value<int> version;
-  final Value<PhoneE164> phoneE164;
+  final Value<PhoneE164?> phoneE164;
+  final Value<String?> phoneRaw;
   final Value<PhoneE164?> phoneAlt;
   final Value<String> displayName;
   final Value<String?> notes;
@@ -3528,6 +3598,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     this.deletedAt = const Value.absent(),
     this.version = const Value.absent(),
     this.phoneE164 = const Value.absent(),
+    this.phoneRaw = const Value.absent(),
     this.phoneAlt = const Value.absent(),
     this.displayName = const Value.absent(),
     this.notes = const Value.absent(),
@@ -3545,7 +3616,8 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
     required int version,
-    required PhoneE164 phoneE164,
+    this.phoneE164 = const Value.absent(),
+    this.phoneRaw = const Value.absent(),
     this.phoneAlt = const Value.absent(),
     required String displayName,
     this.notes = const Value.absent(),
@@ -3560,7 +3632,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt),
        version = Value(version),
-       phoneE164 = Value(phoneE164),
        displayName = Value(displayName);
   static Insertable<Customer> custom({
     Expression<String>? id,
@@ -3570,6 +3641,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Expression<int>? deletedAt,
     Expression<int>? version,
     Expression<String>? phoneE164,
+    Expression<String>? phoneRaw,
     Expression<String>? phoneAlt,
     Expression<String>? displayName,
     Expression<String>? notes,
@@ -3588,6 +3660,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (version != null) 'version': version,
       if (phoneE164 != null) 'phone_e164': phoneE164,
+      if (phoneRaw != null) 'phone_raw': phoneRaw,
       if (phoneAlt != null) 'phone_alt': phoneAlt,
       if (displayName != null) 'display_name': displayName,
       if (notes != null) 'notes': notes,
@@ -3607,7 +3680,8 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
     Value<int>? version,
-    Value<PhoneE164>? phoneE164,
+    Value<PhoneE164?>? phoneE164,
+    Value<String?>? phoneRaw,
     Value<PhoneE164?>? phoneAlt,
     Value<String>? displayName,
     Value<String?>? notes,
@@ -3626,6 +3700,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       deletedAt: deletedAt ?? this.deletedAt,
       version: version ?? this.version,
       phoneE164: phoneE164 ?? this.phoneE164,
+      phoneRaw: phoneRaw ?? this.phoneRaw,
       phoneAlt: phoneAlt ?? this.phoneAlt,
       displayName: displayName ?? this.displayName,
       notes: notes ?? this.notes,
@@ -3667,8 +3742,11 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     }
     if (phoneE164.present) {
       map['phone_e164'] = Variable<String>(
-        $CustomersTable.$converterphoneE164.toSql(phoneE164.value),
+        $CustomersTable.$converterphoneE164n.toSql(phoneE164.value),
       );
+    }
+    if (phoneRaw.present) {
+      map['phone_raw'] = Variable<String>(phoneRaw.value);
     }
     if (phoneAlt.present) {
       map['phone_alt'] = Variable<String>(
@@ -3716,6 +3794,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
           ..write('deletedAt: $deletedAt, ')
           ..write('version: $version, ')
           ..write('phoneE164: $phoneE164, ')
+          ..write('phoneRaw: $phoneRaw, ')
           ..write('phoneAlt: $phoneAlt, ')
           ..write('displayName: $displayName, ')
           ..write('notes: $notes, ')
@@ -19133,7 +19212,8 @@ typedef $$CustomersTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
       required int version,
-      required PhoneE164 phoneE164,
+      Value<PhoneE164?> phoneE164,
+      Value<String?> phoneRaw,
       Value<PhoneE164?> phoneAlt,
       required String displayName,
       Value<String?> notes,
@@ -19152,7 +19232,8 @@ typedef $$CustomersTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
       Value<int> version,
-      Value<PhoneE164> phoneE164,
+      Value<PhoneE164?> phoneE164,
+      Value<String?> phoneRaw,
       Value<PhoneE164?> phoneAlt,
       Value<String> displayName,
       Value<String?> notes,
@@ -19263,11 +19344,16 @@ class $$CustomersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<PhoneE164, PhoneE164, String> get phoneE164 =>
+  ColumnWithTypeConverterFilters<PhoneE164?, PhoneE164, String> get phoneE164 =>
       $composableBuilder(
         column: $table.phoneE164,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<String> get phoneRaw => $composableBuilder(
+    column: $table.phoneRaw,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnWithTypeConverterFilters<PhoneE164?, PhoneE164, String> get phoneAlt =>
       $composableBuilder(
@@ -19425,6 +19511,11 @@ class $$CustomersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get phoneRaw => $composableBuilder(
+    column: $table.phoneRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get phoneAlt => $composableBuilder(
     column: $table.phoneAlt,
     builder: (column) => ColumnOrderings(column),
@@ -19513,8 +19604,11 @@ class $$CustomersTableAnnotationComposer
   GeneratedColumn<int> get version =>
       $composableBuilder(column: $table.version, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<PhoneE164, String> get phoneE164 =>
+  GeneratedColumnWithTypeConverter<PhoneE164?, String> get phoneE164 =>
       $composableBuilder(column: $table.phoneE164, builder: (column) => column);
+
+  GeneratedColumn<String> get phoneRaw =>
+      $composableBuilder(column: $table.phoneRaw, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<PhoneE164?, String> get phoneAlt =>
       $composableBuilder(column: $table.phoneAlt, builder: (column) => column);
@@ -19664,7 +19758,8 @@ class $$CustomersTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> version = const Value.absent(),
-                Value<PhoneE164> phoneE164 = const Value.absent(),
+                Value<PhoneE164?> phoneE164 = const Value.absent(),
+                Value<String?> phoneRaw = const Value.absent(),
                 Value<PhoneE164?> phoneAlt = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -19682,6 +19777,7 @@ class $$CustomersTableTableManager
                 deletedAt: deletedAt,
                 version: version,
                 phoneE164: phoneE164,
+                phoneRaw: phoneRaw,
                 phoneAlt: phoneAlt,
                 displayName: displayName,
                 notes: notes,
@@ -19700,7 +19796,8 @@ class $$CustomersTableTableManager
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
                 required int version,
-                required PhoneE164 phoneE164,
+                Value<PhoneE164?> phoneE164 = const Value.absent(),
+                Value<String?> phoneRaw = const Value.absent(),
                 Value<PhoneE164?> phoneAlt = const Value.absent(),
                 required String displayName,
                 Value<String?> notes = const Value.absent(),
@@ -19718,6 +19815,7 @@ class $$CustomersTableTableManager
                 deletedAt: deletedAt,
                 version: version,
                 phoneE164: phoneE164,
+                phoneRaw: phoneRaw,
                 phoneAlt: phoneAlt,
                 displayName: displayName,
                 notes: notes,

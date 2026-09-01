@@ -63,11 +63,32 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) => m.createAll(),
+
+    // v1 → v2: `customers.phone_e164` becomes nullable and `phone_raw` joins
+    // it, so a number the parser rejects can still be saved. See the column
+    // docs — the driver's morning does not stop because a validator disagrees
+    // with a pre-2008 landline.
+    //
+    // SQLite cannot drop a NOT NULL, so this is a table rebuild: drift creates
+    // the new shape, copies every row, swaps the names and rebuilds the index.
+    // `columnTransformer` is what fills `phone_raw` for existing rows — every
+    // v1 customer parsed by definition, since the column was non-null, so they
+    // all get null and keep their `phone_e164`.
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.alterTable(
+          TableMigration(
+            customers,
+            newColumns: <GeneratedColumn<Object>>[customers.phoneRaw],
+          ),
+        );
+      }
+    },
 
     // Every one of these is **per connection**, not a property of the file, so
     // they are set on open rather than once at creation. `journal_mode` is the

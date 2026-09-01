@@ -76,7 +76,7 @@ void main() {
           CustomersCompanion.insert(
             id: customerId,
             ownerId: userId,
-            phoneE164: PhoneE164.parse('0550123456'),
+            phoneE164: Value<PhoneE164?>(PhoneE164.parse('0550123456')),
             displayName: 'Amine',
             createdAt: stamp.createdAt,
             updatedAt: stamp.updatedAt,
@@ -370,7 +370,9 @@ void main() {
                 id: _id(10),
                 ownerId: userId,
                 // A different spelling of the same number.
-                phoneE164: PhoneE164.parse('+213 550 123 456'),
+                phoneE164: Value<PhoneE164?>(
+                  PhoneE164.parse('+213 550 123 456'),
+                ),
                 displayName: 'Someone else',
                 createdAt: stamp.createdAt,
                 updatedAt: stamp.updatedAt,

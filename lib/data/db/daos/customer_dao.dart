@@ -110,7 +110,7 @@ final class CustomerDao {
             CustomersCompanion.insert(
               id: id,
               ownerId: ownerId,
-              phoneE164: phone,
+              phoneE164: Value<PhoneE164?>(phone),
               displayName: displayName,
               phoneAlt: Value<PhoneE164?>(phoneAlt),
               notes: Value<String?>(notes),
@@ -120,6 +120,107 @@ final class CustomerDao {
               version: stamp.version,
             ),
           ),
+    );
+  }
+
+  /// Creates a customer whose number the parser rejected.
+  ///
+  /// **The reason `phone_e164` is nullable.** A driver in an agency at 07:00
+  /// cannot be stopped from entering an order because a validator disagrees
+  /// with a pre-2008 landline format. The raw string is kept verbatim, the
+  /// record is created, and [needingPhoneReview] finds it later.
+  ///
+  /// Not a fallback that [create] reaches for on its own: a caller that meant
+  /// to save a real number and typo'd it should see the parse failure, not have
+  /// it silently absorbed. Choosing this path is the entry flow saying "keep it
+  /// anyway", which is a decision a human made.
+  Future<Customer> createUnparsed({
+    required String ownerId,
+    required String rawPhone,
+    required String displayName,
+    String? notes,
+  }) {
+    final String id = _uuid.next();
+    final EntityStamp stamp = _stamper.forInsert();
+
+    return _mutate<Customer>(
+      entityId: id,
+      operation: OutboxOperation.create,
+      at: stamp.updatedAt,
+      payload: <String, Object?>{
+        'phone_raw': rawPhone,
+        'display_name': displayName,
+        'notes': ?notes,
+      },
+      write: () => _db
+          .into(_db.customers)
+          .insertReturning(
+            CustomersCompanion.insert(
+              id: id,
+              ownerId: ownerId,
+              displayName: displayName,
+              phoneRaw: Value<String>(rawPhone),
+              notes: Value<String?>(notes),
+              createdAt: stamp.createdAt,
+              updatedAt: stamp.updatedAt,
+              version: stamp.version,
+            ),
+          ),
+    );
+  }
+
+  /// Customers whose number never parsed, oldest first.
+  ///
+  /// Derived from the data rather than a stored flag: a third column saying
+  /// "needs review" could disagree with the other two, and there is exactly one
+  /// state that means it — no parsed number.
+  Future<List<Customer>> needingPhoneReview({required String ownerId}) {
+    return (_db.select(_db.customers)
+          ..where(
+            ($CustomersTable c) =>
+                c.ownerId.equals(ownerId) &
+                c.deletedAt.isNull() &
+                c.phoneE164.isNull(),
+          )
+          ..orderBy(<OrderClauseGenerator<$CustomersTable>>[
+            ($CustomersTable c) => OrderingTerm(expression: c.createdAt),
+            ($CustomersTable c) => OrderingTerm(expression: c.id),
+          ]))
+        .get();
+  }
+
+  /// Replaces an unparsed number with one that parses.
+  ///
+  /// The correction flow's write. Clears `phone_raw` in the same statement,
+  /// because the CHECK constraint permits exactly one of the two — and because
+  /// keeping the rejected string after it has been superseded would leave two
+  /// answers to "what is this customer's number".
+  Future<Customer> resolvePhone({
+    required Customer current,
+    required PhoneE164 phone,
+  }) {
+    final EntityStamp stamp = _stamper.forUpdate(current.stamp);
+
+    return _mutate<Customer>(
+      entityId: current.id,
+      operation: OutboxOperation.update,
+      at: stamp.updatedAt,
+      payload: <String, Object?>{'phone_e164': phone.e164},
+      write: () async {
+        await (_db.update(
+          _db.customers,
+        )..where(($CustomersTable c) => c.id.equals(current.id))).write(
+          CustomersCompanion(
+            phoneE164: Value<PhoneE164?>(phone),
+            phoneRaw: const Value<String?>(null),
+            updatedAt: Value<DateTime>(stamp.updatedAt),
+            version: Value<int>(stamp.version),
+          ),
+        );
+        return (_db.select(
+          _db.customers,
+        )..where(($CustomersTable c) => c.id.equals(current.id))).getSingle();
+      },
     );
   }
 

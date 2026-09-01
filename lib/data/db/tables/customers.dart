@@ -47,9 +47,34 @@ class Customers extends Table with UuidPrimaryKey, OwnedMutableColumns {
   TextColumn get ownerId =>
       text().withLength(min: 36, max: 36).references(Users, #id)();
 
-  /// The identity key. Normalized to `+213XXXXXXXXX` on the way in, so every
-  /// spelling of one number collapses to one row.
-  TextColumn get phoneE164 => text().map(const PhoneE164Converter())();
+  /// The identity key when it parses. Normalized to `+213XXXXXXXXX` on the way
+  /// in, so every spelling of one number collapses to one row.
+  ///
+  /// **Nullable, because the validator does not get to end a driver's
+  /// morning.** A number that fails to parse must not block order creation
+  /// (M1 notes, settled at M0-09): the entry flow saves and fixes later. This
+  /// matters most for landlines — `PhoneE164.nationalLength` assumes nine
+  /// significant digits, and Algeria's pre-2008 landline formats were shorter,
+  /// so a real customer can be rejected by a rule that is merely out of date.
+  ///
+  /// The partial unique index is unaffected: SQLite permits many nulls in a
+  /// unique index, so any number of unparsed customers coexist while parsed
+  /// ones stay unique per owner.
+  TextColumn get phoneE164 =>
+      text().map(const PhoneE164Converter()).nullable()();
+
+  /// What the driver actually typed, kept verbatim when it did not parse.
+  ///
+  /// Exactly one of this and [phoneE164] is set, enforced by a CHECK rather
+  /// than by convention — see [customConstraints]. That makes "this customer
+  /// needs their number corrected" derivable (`phoneE164 == null`) rather than
+  /// a third column that can disagree with the other two.
+  ///
+  /// Deliberately unnormalized and unvalidated. Whatever is here is what was on
+  /// the parcel, and it is the only evidence of the real number: rewriting it
+  /// into a shape our parser likes would destroy the thing a human needs to see
+  /// when they fix it.
+  TextColumn get phoneRaw => text().withLength(min: 1, max: 40).nullable()();
 
   /// A second number for the same person. Normalized too, but not part of the
   /// identity: nothing joins or de-duplicates on it.
@@ -81,6 +106,20 @@ class Customers extends Table with UuidPrimaryKey, OwnedMutableColumns {
 
   IntColumn get lastDeliveredAt =>
       integer().map(const UtcMillisecondsConverter()).nullable()();
+
+  /// Exactly one of `phone_e164` and `phone_raw`, never both and never neither.
+  ///
+  /// Structural rather than conventional, because the two states this models
+  /// are the whole point: a parsed number *is* the identity key, and an
+  /// unparsed one is a string awaiting a human. A row with both would make
+  /// "which is the real number" a question with no answer, and a row with
+  /// neither is a customer nobody can call.
+  ///
+  /// `!=` on two booleans is XOR in SQLite, which is what "exactly one" means.
+  @override
+  List<String> get customConstraints => <String>[
+    'CHECK ((phone_e164 IS NULL) != (phone_raw IS NULL))',
+  ];
 }
 
 /// Where a customer takes delivery, and how much the coordinate is trusted.

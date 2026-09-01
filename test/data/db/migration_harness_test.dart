@@ -74,7 +74,7 @@ void main() {
         // database (whose onCreate runs createAll from the table definitions),
         // and compares the two.
         final AppDatabase db = AppDatabase(NativeDatabase.memory());
-        await verifier.migrateAndValidate(db, 1, options: _strict);
+        await verifier.migrateAndValidate(db, 2, options: _strict);
         await db.close();
       },
     );
@@ -82,7 +82,138 @@ void main() {
     test('the helper knows exactly the versions that are dumped', () {
       // A version present in code but absent from drift_schema/ would fail at
       // migration time on a driver's phone rather than here.
-      expect(GeneratedHelper.versions, <int>[1]);
+      expect(GeneratedHelper.versions, <int>[1, 2]);
+    });
+  });
+
+  group('v1 to v2: the phone column becomes nullable', () {
+    // The first real migration, and the first use of this harness for what it
+    // was built for. SQLite cannot drop a NOT NULL, so drift rebuilds the
+    // table: new shape, copy every row, swap the names, rebuild the index.
+    // Everything below is about what survives that rebuild.
+
+    Future<AppDatabase> migrate(InitializedSchema schema) async {
+      final AppDatabase db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 2, options: _strict);
+      await db.close();
+      return AppDatabase(schema.newConnection());
+    }
+
+    test('an existing customer keeps their number', () async {
+      // Every v1 customer parsed by definition — the column was non-null — so
+      // none of them should acquire a raw phone or lose the parsed one.
+      final InitializedSchema schema = await verifier.schemaAt(1);
+      final v1.DatabaseAtV1 old = v1.DatabaseAtV1(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.customStatement(
+        'INSERT INTO customers (id, owner_id, phone_e164, display_name, '
+        'total_orders, total_delivered, total_failed, created_at, updated_at, '
+        "version) VALUES ('${_id(4)}', '${_id(1)}', '+213550123456', 'Amine', "
+        '7, 5, 2, 1000, 2000, 3)',
+      );
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      final QueryRow row = await after
+          .customSelect(
+            'SELECT phone_e164, phone_raw, display_name, version, '
+            'total_orders FROM customers',
+          )
+          .getSingle();
+
+      expect(row.read<String>('phone_e164'), '+213550123456');
+      expect(row.read<String?>('phone_raw'), isNull);
+      expect(row.read<String>('display_name'), 'Amine');
+      // The rebuild copies rows; it must not restamp them.
+      expect(row.read<int>('version'), 3);
+      expect(row.read<int>('total_orders'), 7);
+    });
+
+    test('and the partial unique index survives the rebuild', () async {
+      // A rebuild that dropped the index would silently allow two live
+      // customers on one number — and duplicate detection is built on the
+      // assumption that cannot happen.
+      final InitializedSchema schema = await verifier.schemaAt(1);
+      final v1.DatabaseAtV1 old = v1.DatabaseAtV1(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      final QueryRow index = await after
+          .customSelect(
+            "SELECT sql FROM sqlite_master WHERE type = 'index' "
+            "AND name = 'idx_customers_owner_phone'",
+          )
+          .getSingle();
+
+      expect(index.read<String>('sql'), contains('WHERE deleted_at IS NULL'));
+    });
+
+    test('after migrating, an unparsed number can be saved', () async {
+      // The reason the migration exists. A v1 database could not hold this row
+      // at all.
+      final InitializedSchema schema = await verifier.schemaAt(1);
+      final v1.DatabaseAtV1 old = v1.DatabaseAtV1(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      await after.customStatement(
+        'INSERT INTO customers (id, owner_id, phone_raw, display_name, '
+        'total_orders, total_delivered, total_failed, created_at, updated_at, '
+        "version) VALUES ('${_id(9)}', '${_id(1)}', '021 44 55 66', 'Landline', "
+        '0, 0, 0, 1000, 2000, 1)',
+      );
+
+      final QueryRow row = await after
+          .customSelect('SELECT phone_e164, phone_raw FROM customers')
+          .getSingle();
+      expect(row.read<String?>('phone_e164'), isNull);
+      expect(row.read<String>('phone_raw'), '021 44 55 66');
+    });
+
+    test('but never both, and never neither', () async {
+      // The CHECK constraint, which is what makes "needs review" derivable
+      // instead of a third column that can disagree with the other two.
+      final InitializedSchema schema = await verifier.schemaAt(1);
+      final v1.DatabaseAtV1 old = v1.DatabaseAtV1(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      Future<void> insert(String columns, String values) =>
+          after.customStatement(
+            'INSERT INTO customers (id, owner_id, display_name, total_orders, '
+            'total_delivered, total_failed, created_at, updated_at, version'
+            '$columns) VALUES '
+            "('${_id(10)}', '${_id(1)}', 'X', 0, 0, 0, 1000, 2000, 1$values)",
+          );
+
+      await expectLater(
+        insert(', phone_e164, phone_raw', ", '+213550123456', '0550123456'"),
+        throwsA(anything),
+      );
+      await expectLater(insert('', ''), throwsA(anything));
     });
   });
 
@@ -252,7 +383,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 1, options: _strict);
+      await verifier.migrateAndValidate(migrated, 2, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -278,7 +409,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 1, options: _strict);
+      await verifier.migrateAndValidate(migrated, 2, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -326,7 +457,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 1, options: _strict);
+      await verifier.migrateAndValidate(migrated, 2, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -355,7 +486,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 1, options: _strict);
+      await verifier.migrateAndValidate(migrated, 2, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());

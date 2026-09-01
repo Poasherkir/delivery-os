@@ -102,6 +102,29 @@ final List<_Mutation> _mutations = <_Mutation>[
     invoke: (_Fixture f, Customer? c) => f.customers.softDelete(c!),
   ),
   (
+    dao: 'CustomerDao',
+    method: 'createUnparsed',
+    prepare: null,
+    invoke: (_Fixture f, Customer? _) => f.customers.createUnparsed(
+      ownerId: f.userId,
+      rawPhone: '021 44 55 66',
+      displayName: 'Landline',
+    ),
+  ),
+  (
+    dao: 'CustomerDao',
+    method: 'resolvePhone',
+    prepare: (_Fixture f) => f.customers.createUnparsed(
+      ownerId: f.userId,
+      rawPhone: '021 77 88 99',
+      displayName: 'Landline',
+    ),
+    invoke: (_Fixture f, Customer? c) => f.customers.resolvePhone(
+      current: c!,
+      phone: PhoneE164.parse('0550777888'),
+    ),
+  ),
+  (
     dao: 'UserSettingsDao',
     method: 'setLocale',
     prepare: null,

@@ -104,6 +104,116 @@ void main() {
     });
   });
 
+  group('a number the parser rejects', () {
+    // The reason phone_e164 is nullable. A driver in an agency at 07:00 is not
+    // stopped because a validator disagrees with a pre-2008 landline format.
+
+    test('is saved verbatim, not normalized into a shape we prefer', () async {
+      final Customer c = await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'Landline',
+      );
+
+      expect(c.phoneE164, isNull);
+      expect(
+        c.phoneRaw,
+        '021 44 55 66',
+        reason: 'the only evidence of the real number was rewritten',
+      );
+    });
+
+    test('several of them coexist', () async {
+      // Many nulls are permitted in a unique index, so unparsed customers do
+      // not collide with each other the way parsed ones would.
+      await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'One',
+      );
+      await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'Two',
+      );
+
+      expect(await dao.needingPhoneReview(ownerId: ownerId), hasLength(2));
+    });
+
+    test('needing review is derived, not flagged', () async {
+      // No third column that could disagree with the other two: there is
+      // exactly one state that means "needs correcting", and it is visible in
+      // the data.
+      await create();
+      await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'Landline',
+      );
+
+      final List<Customer> pending = await dao.needingPhoneReview(
+        ownerId: ownerId,
+      );
+
+      expect(pending, hasLength(1));
+      expect(pending.single.displayName, 'Landline');
+    });
+
+    test('resolving it clears the raw string', () async {
+      // Keeping the rejected string after it has been superseded would leave
+      // two answers to "what is this customer's number".
+      final Customer c = await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'Landline',
+      );
+
+      final Customer fixed = await dao.resolvePhone(
+        current: c,
+        phone: PhoneE164.parse('0550123456'),
+      );
+
+      expect(fixed.phoneE164?.e164, '+213550123456');
+      expect(fixed.phoneRaw, isNull);
+      expect(fixed.version, 2);
+      expect(await dao.needingPhoneReview(ownerId: ownerId), isEmpty);
+    });
+
+    test('and it becomes findable by phone', () async {
+      final Customer c = await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'Landline',
+      );
+      await dao.resolvePhone(current: c, phone: PhoneE164.parse('0550123456'));
+
+      expect(
+        (await dao.findByPhone(
+          ownerId: ownerId,
+          phone: PhoneE164.parse('0550123456'),
+        ))?.id,
+        c.id,
+      );
+    });
+
+    test('an unparsed customer is not findable by phone', () async {
+      // findByPhone matches the identity key, and there is not one yet.
+      await dao.createUnparsed(
+        ownerId: ownerId,
+        rawPhone: '021 44 55 66',
+        displayName: 'Landline',
+      );
+
+      expect(
+        await dao.findByPhone(
+          ownerId: ownerId,
+          phone: PhoneE164.parse('0550123456'),
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('stamping', () {
     test('a new customer starts at version 1, not deleted', () async {
       final Customer c = await create();
