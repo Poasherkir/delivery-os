@@ -216,6 +216,108 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Cela peut arriver après la restauration d\'un téléphone depuis une sauvegarde, ou après le passage à un nouvel appareil : les données peuvent être copiées, mais pas ce qui permet de les ouvrir.'**
   String get dbErrorWhyBody;
+
+  /// Secondary path on the failure screen, leading to the destructive reset. Never a peer of the retry button: a driver who has just read that his data will not open must not be one panicked tap from destroying it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autres options'**
+  String get dbErrorOtherOptions;
+
+  /// Shown on the failure screen when a reset attempt did not complete. Deliberately says nothing about whether the data survived — the delete may have succeeded before the key regeneration failed, so any claim either way could be false. It is one line added to the existing screen rather than a new error state: the driver has now had two things fail, and composing a second error on top of the first makes the screen read as though the app is confused about which.
+  ///
+  /// In fr, this message translates to:
+  /// **'La réinitialisation ne s\'est pas terminée.'**
+  String get dbErrorResetFailed;
+
+  /// Title of the first reset step. Names the action plainly — not 'Réinitialiser', which sounds reversible.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer les données et recommencer'**
+  String get resetTitle;
+
+  /// Introduces the loss list. Categories rather than counts, because the database is unreadable and we cannot count what is in it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ceci supprime définitivement ce que l\'application a enregistré sur ce téléphone :'**
+  String get resetLosesIntro;
+
+  /// First loss category.
+  ///
+  /// In fr, this message translates to:
+  /// **'les livraisons et leur historique'**
+  String get resetLosesDeliveries;
+
+  /// Second loss category. 'Adresses enregistrées' covers the learned pins, which are the most expensive thing to rebuild.
+  ///
+  /// In fr, this message translates to:
+  /// **'les clients et leurs adresses enregistrées'**
+  String get resetLosesCustomers;
+
+  /// Third loss category, and the one with financial consequence.
+  ///
+  /// In fr, this message translates to:
+  /// **'les encaissements et les règlements'**
+  String get resetLosesMoney;
+
+  /// Stated as its own sentence. No backup exists, and promising recovery would be a lie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien de tout cela ne peut être récupéré.'**
+  String get resetIrreversible;
+
+  /// Repeats the reconcile instruction from the failure screen, because this is genuinely the last moment it is useful. TODO(bordereau): see the note on dbErrorReconcile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Si ce n\'est pas déjà fait, comparez d\'abord l\'argent encaissé avec le bordereau de l\'entreprise. C\'est le dernier moment pour le faire.'**
+  String get resetReconcileFirst;
+
+  /// Backs out of the reset. Must land on the failure screen, never a blank route.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get resetCancel;
+
+  /// Advances to the hold-to-confirm step. Not the destructive action itself.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get resetContinue;
+
+  /// Title of the second reset step.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenez pour supprimer'**
+  String get resetHoldTitle;
+
+  /// A press-and-hold rather than a typed confirmation word. Typing a word on a phone keyboard, in a second script, one-handed, while holding a parcel is the wrong interaction here. A hold is language-neutral, impossible to trigger by muscle memory, and works with one thumb.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appuyez et maintenez pendant 3 secondes.'**
+  String get resetHoldInstruction;
+
+  /// The confirm control says what it does. Never 'OK' or 'Confirmer' — the label is the last thing between the driver and permanent loss.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenir pour supprimer définitivement'**
+  String get resetHoldAction;
+
+  /// Shown after a completed reset. Dropping silently into an empty app would read as another failure.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'application a redémarré à zéro'**
+  String get resetDoneTitle;
+
+  /// Confirms what happened and that the app is usable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les anciennes données ont été supprimées. Vous pouvez commencer une nouvelle journée.'**
+  String get resetDoneBody;
+
+  /// Leaves the reset flow into normal startup. The only way off this screen — the reset flow behind it is cleared, since returning would offer to destroy data that no longer exists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commencer'**
+  String get resetDoneAction;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

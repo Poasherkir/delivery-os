@@ -11,6 +11,7 @@ import '../core/utils/uuid_v7.dart';
 import '../data/db/daos/user_settings_dao.dart';
 import '../data/db/database_location.dart';
 import '../data/db/encryption/database_key.dart';
+import '../data/db/encryption/database_reset.dart';
 import '../data/db/encryption/encrypted_database.dart';
 import '../data/db/encryption/secure_key_store.dart';
 import '../domain/repositories/user_settings.dart';
@@ -50,12 +51,20 @@ final Provider<UuidV7Generator> uuidProvider = Provider<UuidV7Generator>(
 /// overriding the open necessarily replaces the check too.
 @immutable
 final class DatabaseAccess {
-  const DatabaseAccess({required this.open, this.verifyAfterWrite});
+  const DatabaseAccess({required this.open, this.verifyAfterWrite, this.reset});
 
   final Future<QueryExecutor> Function() open;
 
   /// Runs once a row is on disk. Null in tests.
   final Future<void> Function()? verifyAfterWrite;
+
+  /// Destroys the database and mints a fresh key.
+  ///
+  /// Here rather than in a provider of its own for the same reason as
+  /// [verifyAfterWrite]: it needs the device file path and the platform
+  /// keystore, so a test that swapped the opener and left this behind would
+  /// delete a real file on a real machine. They travel together.
+  final Future<void> Function()? reset;
 }
 
 final Provider<DatabaseAccess> databaseAccessProvider =
@@ -63,6 +72,7 @@ final Provider<DatabaseAccess> databaseAccessProvider =
       (Ref ref) => const DatabaseAccess(
         open: _openOnDevice,
         verifyAfterWrite: _assertEncryptedOnDevice,
+        reset: _resetOnDevice,
       ),
     );
 
@@ -70,6 +80,14 @@ Future<QueryExecutor> _openOnDevice() async => openEncryptedDatabase(
   file: await defaultDatabaseFile(),
   keys: DatabaseKeyProvider(const SecureKeyStore()),
 );
+
+/// Deletes the on-device database and mints a fresh key.
+Future<void> _resetOnDevice() async {
+  await DatabaseReset(
+    file: await defaultDatabaseFile(),
+    keys: DatabaseKeyProvider(const SecureKeyStore()),
+  ).run();
+}
 
 /// Debug-only: fails loudly if the file on disk turns out to be plain SQLite.
 ///

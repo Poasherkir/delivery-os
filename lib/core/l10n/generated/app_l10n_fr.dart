@@ -70,4 +70,60 @@ class AppL10nFr extends AppL10n {
   @override
   String get dbErrorWhyBody =>
       'Cela peut arriver après la restauration d\'un téléphone depuis une sauvegarde, ou après le passage à un nouvel appareil : les données peuvent être copiées, mais pas ce qui permet de les ouvrir.';
+
+  @override
+  String get dbErrorOtherOptions => 'Autres options';
+
+  @override
+  String get dbErrorResetFailed =>
+      'La réinitialisation ne s\'est pas terminée.';
+
+  @override
+  String get resetTitle => 'Effacer les données et recommencer';
+
+  @override
+  String get resetLosesIntro =>
+      'Ceci supprime définitivement ce que l\'application a enregistré sur ce téléphone :';
+
+  @override
+  String get resetLosesDeliveries => 'les livraisons et leur historique';
+
+  @override
+  String get resetLosesCustomers =>
+      'les clients et leurs adresses enregistrées';
+
+  @override
+  String get resetLosesMoney => 'les encaissements et les règlements';
+
+  @override
+  String get resetIrreversible => 'Rien de tout cela ne peut être récupéré.';
+
+  @override
+  String get resetReconcileFirst =>
+      'Si ce n\'est pas déjà fait, comparez d\'abord l\'argent encaissé avec le bordereau de l\'entreprise. C\'est le dernier moment pour le faire.';
+
+  @override
+  String get resetCancel => 'Annuler';
+
+  @override
+  String get resetContinue => 'Continuer';
+
+  @override
+  String get resetHoldTitle => 'Maintenez pour supprimer';
+
+  @override
+  String get resetHoldInstruction => 'Appuyez et maintenez pendant 3 secondes.';
+
+  @override
+  String get resetHoldAction => 'Maintenir pour supprimer définitivement';
+
+  @override
+  String get resetDoneTitle => 'L\'application a redémarré à zéro';
+
+  @override
+  String get resetDoneBody =>
+      'Les anciennes données ont été supprimées. Vous pouvez commencer une nouvelle journée.';
+
+  @override
+  String get resetDoneAction => 'Commencer';
 }

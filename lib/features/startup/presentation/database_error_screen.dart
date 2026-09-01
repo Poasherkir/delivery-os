@@ -6,6 +6,8 @@ import '../../../core/l10n/generated/app_l10n.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/tokens/tokens.dart';
 import '../../../shared/widgets/app_text.dart';
+import '../controllers/reset_controller.dart';
+import 'database_reset_screen.dart';
 
 /// Shown when the encrypted database will not open.
 ///
@@ -84,7 +86,28 @@ class DatabaseErrorScreen extends ConsumerWidget {
 
                       const Spacer(),
                       const SizedBox(height: SpaceTokens.space24),
+
+                      // One line, on the existing screen, when a reset attempt
+                      // did not complete. Deliberately not a second error
+                      // state: the driver has now had two things fail, and
+                      // stacking one on the other makes the screen read as
+                      // though the app is confused about which.
+                      if (ref.watch(resetControllerProvider) ==
+                          ResetPhase.failed)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: SpaceTokens.space12,
+                          ),
+                          child: AppText(
+                            l10n.dbErrorResetFailed,
+                            AppTextStyle.bodySmall,
+                            color: colors.statusProblemFg,
+                          ),
+                        ),
+
                       _RetryButton(label: l10n.dbErrorRetry),
+                      const SizedBox(height: SpaceTokens.space8),
+                      _OtherOptions(label: l10n.dbErrorOtherOptions),
                     ],
                   ),
                 ),
@@ -209,6 +232,39 @@ class _WhyState extends State<_Why> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// The secondary path to the destructive reset.
+///
+/// A quiet text button below retry, never a peer of it. A driver who has just
+/// read that his data will not open must not be one panicked tap from
+/// destroying it, so the reset is two screens and a three-second hold away.
+class _OtherOptions extends ConsumerWidget {
+  const _OtherOptions({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: TextButton(
+        key: const Key('dbError.otherOptions'),
+        onPressed: () {
+          // Clear a stale failure line: it described the previous attempt, not
+          // this one.
+          ref.read(resetControllerProvider.notifier).acknowledgeFailure();
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const DatabaseResetScreen(),
+            ),
+          );
+        },
+        child: AppText(label, AppTextStyle.label),
+      ),
     );
   }
 }

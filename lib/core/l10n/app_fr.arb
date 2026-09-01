@@ -79,5 +79,73 @@
   "dbErrorWhyBody": "Cela peut arriver après la restauration d'un téléphone depuis une sauvegarde, ou après le passage à un nouvel appareil : les données peuvent être copiées, mais pas ce qui permet de les ouvrir.",
   "@dbErrorWhyBody": {
     "description": "Phrased as 'this can happen after', never 'this happened because'. We cannot determine the cause, and a wrong explanation on the worst day costs more trust than no explanation."
+  },
+  "dbErrorOtherOptions": "Autres options",
+  "@dbErrorOtherOptions": {
+    "description": "Secondary path on the failure screen, leading to the destructive reset. Never a peer of the retry button: a driver who has just read that his data will not open must not be one panicked tap from destroying it."
+  },
+  "dbErrorResetFailed": "La réinitialisation ne s'est pas terminée.",
+  "@dbErrorResetFailed": {
+    "description": "Shown on the failure screen when a reset attempt did not complete. Deliberately says nothing about whether the data survived — the delete may have succeeded before the key regeneration failed, so any claim either way could be false. It is one line added to the existing screen rather than a new error state: the driver has now had two things fail, and composing a second error on top of the first makes the screen read as though the app is confused about which."
+  },
+  "resetTitle": "Effacer les données et recommencer",
+  "@resetTitle": {
+    "description": "Title of the first reset step. Names the action plainly — not 'Réinitialiser', which sounds reversible."
+  },
+  "resetLosesIntro": "Ceci supprime définitivement ce que l'application a enregistré sur ce téléphone :",
+  "@resetLosesIntro": {
+    "description": "Introduces the loss list. Categories rather than counts, because the database is unreadable and we cannot count what is in it."
+  },
+  "resetLosesDeliveries": "les livraisons et leur historique",
+  "@resetLosesDeliveries": {
+    "description": "First loss category."
+  },
+  "resetLosesCustomers": "les clients et leurs adresses enregistrées",
+  "@resetLosesCustomers": {
+    "description": "Second loss category. 'Adresses enregistrées' covers the learned pins, which are the most expensive thing to rebuild."
+  },
+  "resetLosesMoney": "les encaissements et les règlements",
+  "@resetLosesMoney": {
+    "description": "Third loss category, and the one with financial consequence."
+  },
+  "resetIrreversible": "Rien de tout cela ne peut être récupéré.",
+  "@resetIrreversible": {
+    "description": "Stated as its own sentence. No backup exists, and promising recovery would be a lie."
+  },
+  "resetReconcileFirst": "Si ce n'est pas déjà fait, comparez d'abord l'argent encaissé avec le bordereau de l'entreprise. C'est le dernier moment pour le faire.",
+  "@resetReconcileFirst": {
+    "description": "Repeats the reconcile instruction from the failure screen, because this is genuinely the last moment it is useful. TODO(bordereau): see the note on dbErrorReconcile."
+  },
+  "resetCancel": "Annuler",
+  "@resetCancel": {
+    "description": "Backs out of the reset. Must land on the failure screen, never a blank route."
+  },
+  "resetContinue": "Continuer",
+  "@resetContinue": {
+    "description": "Advances to the hold-to-confirm step. Not the destructive action itself."
+  },
+  "resetHoldTitle": "Maintenez pour supprimer",
+  "@resetHoldTitle": {
+    "description": "Title of the second reset step."
+  },
+  "resetHoldInstruction": "Appuyez et maintenez pendant 3 secondes.",
+  "@resetHoldInstruction": {
+    "description": "A press-and-hold rather than a typed confirmation word. Typing a word on a phone keyboard, in a second script, one-handed, while holding a parcel is the wrong interaction here. A hold is language-neutral, impossible to trigger by muscle memory, and works with one thumb."
+  },
+  "resetHoldAction": "Maintenir pour supprimer définitivement",
+  "@resetHoldAction": {
+    "description": "The confirm control says what it does. Never 'OK' or 'Confirmer' — the label is the last thing between the driver and permanent loss."
+  },
+  "resetDoneTitle": "L'application a redémarré à zéro",
+  "@resetDoneTitle": {
+    "description": "Shown after a completed reset. Dropping silently into an empty app would read as another failure."
+  },
+  "resetDoneBody": "Les anciennes données ont été supprimées. Vous pouvez commencer une nouvelle journée.",
+  "@resetDoneBody": {
+    "description": "Confirms what happened and that the app is usable."
+  },
+  "resetDoneAction": "Commencer",
+  "@resetDoneAction": {
+    "description": "Leaves the reset flow into normal startup. The only way off this screen — the reset flow behind it is cleared, since returning would offer to destroy data that no longer exists."
   }
 }
