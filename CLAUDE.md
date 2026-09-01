@@ -132,10 +132,56 @@ when the first integration test exists, and not before.
 
 ---
 
+## Standing authority
+
+**Decide these yourself. Do not ask.** If it can be undone in one commit, it is
+yours: test design, naming, file layout, refactors; how to implement a decision
+already made; library choices inside existing constraints; deviations that
+*unblock* the plan; provisional values where a real answer is pending — pick the
+safest, mark it provisional in-source, move on. Anything you would previously
+have asked about and then implemented exactly as proposed.
+
+**Stop and ask only for these six.** Everything else is yours.
+
+1. **Money math or settlement semantics** — what a driver is owed, or what a
+   settlement records.
+2. **Deleting or overwriting user data** — any new path that can destroy data.
+3. **A new Android permission**, or the first network call in a milestone.
+4. **User-facing copy** — draft it, show it once, then implement. Not per string.
+5. **Building outside the current milestone.** Say what you need and stop.
+6. **A decision that would not be reversed cheaply** and has no safe default.
+
+Batch them. One escalation per task at most; if a task raises three, put all
+three in one message and keep working on what is not blocked.
+
+**Reporting cadence.** Per task: one short paragraph — what landed, commit hash,
+gate results, anything escalated. No transcript, and no narration of
+intermediate failures unless the failure changed a decision. Per milestone: the
+full gate, as run for M0.
+
+### Patterns to apply without asking
+
+- **Allowlist over denylist.** Every guard fails closed. Assert the allowlist's
+  contents, never its length.
+- **Mechanical over remembered.** A property held by care becomes a test in the
+  same commit.
+- **A guard that must be deleted the first time it fires is the wrong guard.**
+  Make it a list that grows by deliberate lines instead.
+- **Name things for what they are**, not what you hoped they would be.
+- **Never store the same fact twice.** Derive it.
+- **Raw JSON for anything versioned or frozen.** No typed converter on data that
+  must outlive the model that wrote it.
+- **Fail loudly on data this app wrote itself.** No silent defaults.
+
+---
+
 ## Workflow
 
 - **Plan before coding.** For anything larger than a single file, state the plan
   and wait for confirmation. Do not generate thousands of lines unprompted.
+  Superseded within the standing authority above: plan-and-proceed for anything
+  on the "decide yourself" list, plan-and-wait only at a milestone boundary or
+  when something on the escalation list is in scope.
 - **One concern per commit.** Conventional commits: `feat(orders): ...`,
   `fix(money): ...`, `refactor(route): ...`, `test(rules): ...`.
 - **Work only inside the current milestone.** If a task requires something from a

@@ -36,6 +36,11 @@ const List<String> _rulesDocumentMarkers = <String>[
   'Formatting and checking are two different commands',
   'A test that would pass against an empty implementation',
   'Write files with the Write tool, never a shell heredoc',
+  // The standing authority. A second copy of these would re-create the
+  // approval loop in one file while the other says it is gone.
+  'Stop and ask only for these six',
+  'Allowlist over denylist',
+  'Decide these yourself',
 ];
 
 void main() {
@@ -98,6 +103,9 @@ void main() {
       'Formatting and checking are two different commands', // M0-22
       'A test that would pass against an empty implementation', // M1-00.2
       'cannot be verified by the session that', // M1-00.2, bootstrap files
+      'Stop and ask only for these six', // standing authority
+      'Allowlist over denylist',
+      'A guard that must be deleted the first time it fires',
     ]) {
       test('"$rule"', () {
         expect(
