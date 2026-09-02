@@ -19,7 +19,9 @@ import '../data/geo/bundled_geo_assets.dart';
 import '../data/geo/geo_hydration.dart';
 import '../data/geo/geo_loader.dart';
 import '../data/repositories/drift_customer_repository.dart';
+import '../data/repositories/drift_geography_repository.dart';
 import '../domain/repositories/customer_repository.dart';
+import '../domain/repositories/geography_repository.dart';
 import '../domain/repositories/user_settings.dart';
 import 'startup.dart';
 
@@ -191,6 +193,15 @@ final Provider<CustomerRepository?> customerRepositoryProvider =
         ),
         ownerId: started.user.id,
       );
+    });
+
+/// Algeria's wilayas and communes — **null until the database is open**.
+final Provider<GeographyRepository?> geographyRepositoryProvider =
+    Provider<GeographyRepository?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      return started == null
+          ? null
+          : DriftGeographyRepository(started.database);
     });
 
 /// The database-backed settings store — **null until the database is open**.
