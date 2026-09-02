@@ -15,6 +15,7 @@ import '../../domain/value_objects/payment_method.dart';
 import '../../domain/value_objects/phone_e164.dart';
 import '../../domain/value_objects/route_status.dart';
 import 'conventions/converters.dart';
+import 'customer_search_index.dart';
 import 'tables/batches.dart';
 import 'tables/companies.dart';
 import 'tables/customers.dart';
@@ -63,11 +64,26 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
+
+  /// Creates the FTS5 table and its triggers, in that order.
+  Future<void> _createSearchIndex() async {
+    await customStatement(createCustomerSearchIndex);
+    for (final String trigger in createCustomerSearchTriggers) {
+      await customStatement(trigger);
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (Migrator m) => m.createAll(),
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      // After createAll, not before: the triggers fire on `customers`, so the
+      // table has to exist first. This ordering is the reason these live here
+      // as raw SQL rather than as drift entities — drift put the generated
+      // triggers ahead of the table and createAll built one on nothing.
+      await _createSearchIndex();
+    },
 
     // v1 → v2: `customers.phone_e164` becomes nullable and `phone_raw` joins
     // it, so a number the parser rejects can still be saved. See the column
@@ -87,6 +103,17 @@ class AppDatabase extends _$AppDatabase {
             newColumns: <GeneratedColumn<Object>>[customers.phoneRaw],
           ),
         );
+      }
+
+      // v2 → v3: the FTS5 index over customers, replacing a LIKE scan.
+      //
+      // The backfill is the whole point of doing this in a migration rather
+      // than lazily: an existing driver has hundreds of customers already, and
+      // an index that only covered rows written after the upgrade would answer
+      // searches with a confident, wrong, shorter list.
+      if (from < 3) {
+        await _createSearchIndex();
+        await customStatement(backfillCustomerSearchIndex);
       }
     },
 

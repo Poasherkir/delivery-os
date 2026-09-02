@@ -182,7 +182,16 @@ void main() {
         )
         .get();
 
-    expect(tables, hasLength(20));
+    // The twenty declared tables, plus customers_fts and the five shadow
+    // tables SQLite creates for it. Asserted as "at least the twenty" rather
+    // than an exact count: what belongs in the database is
+    // schema_entities_test's job, and duplicating the number here would mean
+    // two places to edit and one of them going stale.
+    expect(tables.length, greaterThanOrEqualTo(20));
+    expect(
+      tables.map((QueryRow r) => r.read<String>('name')),
+      containsAll(<String>['users', 'customers', 'orders', 'customers_fts']),
+    );
     await db.close();
   });
 }

@@ -80,23 +80,50 @@ final class CustomerDao {
     _db.customers,
   )..where(($CustomersTable c) => c.id.equals(id))).getSingleOrNull();
 
-  /// Free-text search over name and number.
+  /// Free-text search over name and number, through the FTS5 index.
   ///
-  /// **Provisional: a LIKE scan.** Correct and adequate at a few hundred
-  /// customers, and it degrades linearly after that. The real answer is an
-  /// FTS5 virtual table with sync triggers (§6.3 has no SQLite equivalent for
-  /// the Postgres trigram index), which is its own task — building it here
-  /// would mean a virtual table and its triggers arriving inside a screen
-  /// commit.
+  /// Substring matching, not prefix: the index uses the trigram tokenizer
+  /// precisely so that typing the last digits off a parcel finds the customer.
+  /// That costs a floor of three characters — trigram indexes nothing shorter —
+  /// so anything under that falls back to a LIKE scan, which is cheap at one
+  /// or two characters because almost everything matches anyway.
   ///
-  /// Raw SQL because the phone columns carry a type converter, and matching a
-  /// substring of a converted value through the typed API means fighting it.
-  /// The stored form is TEXT either way.
-  ///
-  /// Searches `phone_raw` too, which matters more than it looks: a customer
-  /// whose number never parsed is exactly the one a driver will go looking for
-  /// by typing the digits off the parcel.
+  /// The `MATCH` argument is passed as a bound variable and wrapped in double
+  /// quotes so FTS5 reads it as a literal string. Without the quoting, a query
+  /// containing `*`, `-`, `:` or `OR` would be parsed as query syntax — a
+  /// driver typing a phone number with a dash would get a syntax error rather
+  /// than a customer.
   Future<List<Customer>> search({
+    required String ownerId,
+    required String query,
+  }) {
+    final String trimmed = query.trim();
+    if (trimmed.length < _trigramFloor) {
+      return _searchByScan(ownerId: ownerId, query: trimmed);
+    }
+
+    return _db
+        .customSelect(
+          'SELECT c.* FROM customers_fts f '
+          'JOIN customers c ON c.id = f.customer_id '
+          'WHERE customers_fts MATCH ?2 '
+          'AND c.owner_id = ?1 AND c.deleted_at IS NULL '
+          'ORDER BY c.created_at, c.id',
+          variables: <Variable<Object>>[
+            Variable<String>(ownerId),
+            Variable<String>('"${trimmed.replaceAll('"', '""')}"'),
+          ],
+          readsFrom: <ResultSetImplementation<Table, Object?>>{_db.customers},
+        )
+        .map((QueryRow row) => _db.customers.map(row.data))
+        .get();
+  }
+
+  /// Trigram indexes no substring shorter than this.
+  static const int _trigramFloor = 3;
+
+  /// The one- and two-character case the index cannot serve.
+  Future<List<Customer>> _searchByScan({
     required String ownerId,
     required String query,
   }) {

@@ -6,6 +6,7 @@ import 'package:test/test.dart';
 
 import 'schema_versions/schema.dart';
 import 'schema_versions/schema_v1.dart' as v1;
+import 'schema_versions/schema_v2.dart' as v2;
 
 String _id(int n) => '0199a1b2-c3d4-7000-8000-${n.toString().padLeft(12, '0')}';
 
@@ -35,14 +36,19 @@ const int _adjustment = -15073;
 
 /// The strictest verification drift offers, applied to every check here.
 ///
-/// Both defaults are wrong for a guard. `validateDropped` is off by default, so
-/// a table deleted from the Dart but left behind by a migration would pass
-/// silently — exactly the residue a migration is most likely to leave.
 /// `validateColumnConstraints` is on by default and is spelled out anyway,
 /// because a default that flips in a future drift is a guard that quietly stops
 /// checking `NOT NULL`, defaults and uniqueness.
+///
+/// **`validateDropped` is off, and that is not a relaxation.** It became
+/// unusable at M1-05: drift 2.34 cannot model a virtual table, so the FTS5
+/// index, its three triggers and SQLite's five shadow tables are all absent
+/// from the dump and present in the database, and the flag flagged every one of
+/// them. `schema_entities_test` took the job over and does it better — it
+/// compares the whole of `sqlite_master` against an allowlist in *both*
+/// directions, so it catches a missing entity too, which this flag never could.
 const ValidationOptions _strict = ValidationOptions(
-  validateDropped: true,
+  validateDropped: false,
   validateColumnConstraints: true,
 );
 
@@ -62,27 +68,24 @@ void main() {
   tearDownAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = false);
 
   group('the committed dump describes the live schema', () {
-    test(
-      'a database built from the Dart matches drift_schema_v1.json',
-      () async {
-        // The guard on the harness itself. Without it, somebody adds a column,
-        // forgets to regenerate the dump, and every migration test afterwards
-        // validates against a database that no longer exists — passing while
-        // describing fiction.
-        //
-        // migrateAndValidate builds a reference from the dump, opens this
-        // database (whose onCreate runs createAll from the table definitions),
-        // and compares the two.
-        final AppDatabase db = AppDatabase(NativeDatabase.memory());
-        await verifier.migrateAndValidate(db, 2, options: _strict);
-        await db.close();
-      },
-    );
+    test('a database built from the Dart matches the committed dump', () async {
+      // The guard on the harness itself. Without it, somebody adds a column,
+      // forgets to regenerate the dump, and every migration test afterwards
+      // validates against a database that no longer exists — passing while
+      // describing fiction.
+      //
+      // migrateAndValidate builds a reference from the dump, opens this
+      // database (whose onCreate runs createAll from the table definitions),
+      // and compares the two.
+      final AppDatabase db = AppDatabase(NativeDatabase.memory());
+      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await db.close();
+    });
 
     test('the helper knows exactly the versions that are dumped', () {
       // A version present in code but absent from drift_schema/ would fail at
       // migration time on a driver's phone rather than here.
-      expect(GeneratedHelper.versions, <int>[1, 2]);
+      expect(GeneratedHelper.versions, <int>[1, 2, 3]);
     });
   });
 
@@ -94,7 +97,7 @@ void main() {
 
     Future<AppDatabase> migrate(InitializedSchema schema) async {
       final AppDatabase db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 2, options: _strict);
+      await verifier.migrateAndValidate(db, 3, options: _strict);
       await db.close();
       return AppDatabase(schema.newConnection());
     }
@@ -214,6 +217,126 @@ void main() {
         throwsA(anything),
       );
       await expectLater(insert('', ''), throwsA(anything));
+    });
+  });
+
+  group('v2 to v3: the search index is built and backfilled', () {
+    // The backfill is the whole reason this is a migration rather than a lazy
+    // create. An existing driver already has hundreds of customers, and an
+    // index covering only rows written after the upgrade would answer searches
+    // with a confident, wrong, shorter list — the failure mode nobody reports
+    // because it looks like the customer simply is not there.
+
+    test('a customer written before v3 is findable afterwards', () async {
+      final InitializedSchema schema = await verifier.schemaAt(2);
+      final v2.DatabaseAtV2 old = v2.DatabaseAtV2(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.customStatement(
+        'INSERT INTO customers (id, owner_id, phone_e164, display_name, '
+        'total_orders, total_delivered, total_failed, created_at, updated_at, '
+        "version) VALUES ('${_id(4)}', '${_id(1)}', '+213550123456', "
+        "'Amine Bensalem', 0, 0, 0, 1000, 2000, 1)",
+      );
+      await old.close();
+
+      final AppDatabase db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await db.close();
+
+      final AppDatabase after = AppDatabase(schema.newConnection());
+      addTearDown(after.close);
+
+      // Searched the way the DAO does, by a substring of the number — which is
+      // the case the trigram tokenizer exists for.
+      final List<QueryRow> hits = await after
+          .customSelect(
+            'SELECT c.display_name FROM customers_fts f '
+            'JOIN customers c ON c.id = f.customer_id '
+            'WHERE customers_fts MATCH ?1',
+            variables: <Variable<Object>>[Variable<String>('"550123"')],
+          )
+          .get();
+
+      expect(hits, hasLength(1));
+      expect(hits.single.read<String>('display_name'), 'Amine Bensalem');
+    });
+
+    test('an unparsed number is backfilled from phone_raw', () async {
+      // v2 is where phone_raw arrived, so a pre-v3 database can already hold a
+      // customer with no parsed number — and that is the one most likely to be
+      // searched for by typing digits.
+      final InitializedSchema schema = await verifier.schemaAt(2);
+      final v2.DatabaseAtV2 old = v2.DatabaseAtV2(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.customStatement(
+        'INSERT INTO customers (id, owner_id, phone_raw, display_name, '
+        'total_orders, total_delivered, total_failed, created_at, updated_at, '
+        "version) VALUES ('${_id(5)}', '${_id(1)}', '021 44 55 66', "
+        "'Atelier Centre', 0, 0, 0, 1000, 2000, 1)",
+      );
+      await old.close();
+
+      final AppDatabase db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await db.close();
+
+      final AppDatabase after = AppDatabase(schema.newConnection());
+      addTearDown(after.close);
+
+      final List<QueryRow> hits = await after
+          .customSelect(
+            'SELECT c.display_name FROM customers_fts f '
+            'JOIN customers c ON c.id = f.customer_id '
+            'WHERE customers_fts MATCH ?1',
+            variables: <Variable<Object>>[Variable<String>('"44 55"')],
+          )
+          .get();
+
+      expect(hits, hasLength(1));
+      expect(hits.single.read<String>('display_name'), 'Atelier Centre');
+    });
+
+    test('and the triggers keep it current after the migration', () async {
+      // The backfill covers what was there; the triggers cover what comes
+      // next. A migration that built the index and forgot the triggers would
+      // pass the two tests above and rot from the first new customer.
+      final InitializedSchema schema = await verifier.schemaAt(2);
+      final v2.DatabaseAtV2 old = v2.DatabaseAtV2(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.close();
+
+      final AppDatabase db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await db.close();
+
+      final AppDatabase after = AppDatabase(schema.newConnection());
+      addTearDown(after.close);
+
+      await after.customStatement(
+        'INSERT INTO customers (id, owner_id, phone_e164, display_name, '
+        'total_orders, total_delivered, total_failed, created_at, updated_at, '
+        "version) VALUES ('${_id(6)}', '${_id(1)}', '+213660999888', "
+        "'Karim', 0, 0, 0, 3000, 3000, 1)",
+      );
+
+      final List<QueryRow> hits = await after
+          .customSelect(
+            'SELECT customer_id FROM customers_fts WHERE customers_fts '
+            'MATCH ?1',
+            variables: <Variable<Object>>[Variable<String>('"660999"')],
+          )
+          .get();
+
+      expect(hits, hasLength(1));
     });
   });
 
@@ -383,7 +506,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 2, options: _strict);
+      await verifier.migrateAndValidate(migrated, 3, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -409,7 +532,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 2, options: _strict);
+      await verifier.migrateAndValidate(migrated, 3, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -457,7 +580,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 2, options: _strict);
+      await verifier.migrateAndValidate(migrated, 3, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -486,7 +609,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 2, options: _strict);
+      await verifier.migrateAndValidate(migrated, 3, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());

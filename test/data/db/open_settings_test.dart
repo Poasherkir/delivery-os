@@ -78,7 +78,7 @@ void main() {
   });
 
   group('the schema is created whole', () {
-    test('all twenty tables exist', () async {
+    test('all twenty declared tables exist', () async {
       final List<QueryRow> tables = await db
           .customSelect(
             "SELECT name FROM sqlite_master WHERE type = 'table' "
@@ -86,9 +86,12 @@ void main() {
           )
           .get();
 
+      // containsAll, not equality: the FTS5 index and its five shadow tables
+      // also live here, and enumerating everything is schema_entities_test's
+      // job. This one is about the declared tables being created whole.
       expect(
         tables.map((QueryRow r) => r.read<String>('name')).toSet(),
-        <String>{
+        containsAll(<String>{
           'users',
           'companies',
           'payment_rules',
@@ -109,7 +112,7 @@ void main() {
           'remittances',
           'outbox',
           'audit_logs',
-        },
+        }),
       );
     });
 
