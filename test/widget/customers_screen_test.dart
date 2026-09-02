@@ -343,6 +343,62 @@ void main() {
       expect(find.byKey(const Key('customerForm.unrecognized')), findsNothing);
     });
 
+    testWidgets('a number already taken surfaces the customer while typing', (
+      WidgetTester tester,
+    ) async {
+      // The point of looking up as the driver types. Finding the customer here
+      // saves retyping a name and an address; finding them at save time saves
+      // nothing.
+      await pump(
+        tester,
+        const CustomerFormScreen(),
+        locale: AppLocales.french,
+        repo: _FakeRepo(<Customer>[
+          Customer(
+            id: 'a',
+            displayName: 'Amine Bensalem',
+            version: 1,
+            phone: PhoneE164.parse('0550111111'),
+            totalOrders: 12,
+          ),
+        ]),
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('customerForm.phone')),
+        '0550111111',
+      );
+      // Past the debounce.
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('customerForm.existing')), findsOneWidget);
+      expect(find.text('Amine Bensalem'), findsOneWidget);
+      expect(find.text('12 commandes'), findsOneWidget);
+      expect(find.byKey(const Key('customerForm.useExisting')), findsOneWidget);
+    });
+
+    testWidgets('a free number surfaces nothing', (WidgetTester tester) async {
+      await pump(
+        tester,
+        const CustomerFormScreen(),
+        locale: AppLocales.french,
+        repo: _FakeRepo(<Customer>[
+          _customer(id: 'a', name: 'Amine', phone: '0550111111'),
+        ]),
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('customerForm.phone')),
+        '0660999888',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('customerForm.existing')), findsNothing);
+      expect(find.byKey(const Key('customerForm.unrecognized')), findsNothing);
+    });
+
     testWidgets('a duplicate names the customer holding the number', (
       WidgetTester tester,
     ) async {

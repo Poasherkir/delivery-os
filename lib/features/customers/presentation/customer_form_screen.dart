@@ -12,6 +12,7 @@ import '../../../domain/value_objects/customer_risk_flag.dart';
 import '../../../domain/value_objects/phone_e164.dart';
 import '../../../shared/widgets/app_text.dart';
 import '../controllers/customer_list_controller.dart';
+import '../controllers/customer_lookup_controller.dart';
 
 /// Create or edit a customer.
 ///
@@ -91,12 +92,6 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     });
   }
 
-  /// Whether the number as typed would be kept verbatim rather than normalized.
-  bool get _phoneUnrecognized {
-    final String raw = _phone.text.trim();
-    return raw.isNotEmpty && PhoneE164.tryParse(raw) == null;
-  }
-
   Future<void> _save() async {
     if (!(_form.currentState?.validate() ?? false) || _saving) {
       return;
@@ -171,6 +166,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   Widget build(BuildContext context) {
     final AppL10n l10n = AppL10n.of(context);
     final ColorTokens colors = context.colors;
+    final CustomerLookup lookup = ref.watch(customerLookupProvider);
 
     return Scaffold(
       backgroundColor: colors.canvas,
@@ -205,7 +201,16 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                     key: const Key('customerForm.phone'),
                     controller: _phone,
                     keyboardType: TextInputType.phone,
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (String v) {
+                      // Live, debounced. Finding the customer while the driver
+                      // is still on the phone field is what saves retyping a
+                      // name and address; finding them at save time saves
+                      // nothing.
+                      ref
+                          .read(customerLookupProvider.notifier)
+                          .onPhoneChanged(v);
+                      setState(() {});
+                    },
                     decoration: InputDecoration(
                       labelText: l10n.customerFieldPhone,
                       border: const OutlineInputBorder(),
@@ -215,15 +220,38 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                         : null,
                   ),
 
-                  // Not a validation error: it does not block saving, and it is
-                  // phrased as what will happen rather than as a refusal.
-                  if (_phoneUnrecognized) ...<Widget>[
-                    const SizedBox(height: SpaceTokens.space8),
-                    _Notice(
-                      key: const Key('customerForm.unrecognized'),
-                      text: l10n.customerPhoneUnrecognized,
-                    ),
-                  ],
+                  // Everything the number has turned up, rendered from one
+                  // exclusive state rather than from a pile of nullable flags.
+                  ...switch (lookup) {
+                    LookupIdle() || LookupSearching() => const <Widget>[],
+
+                    // Not a validation error: it does not block saving, and it
+                    // is phrased as what will happen rather than as a refusal.
+                    LookupUnrecognized() => <Widget>[
+                      const SizedBox(height: SpaceTokens.space8),
+                      _Notice(
+                        key: const Key('customerForm.unrecognized'),
+                        text: l10n.customerPhoneUnrecognized,
+                      ),
+                    ],
+
+                    LookupNew() => const <Widget>[],
+
+                    // Only when creating. On an edit screen the customer being
+                    // edited is of course the one holding the number.
+                    LookupExisting(:final Customer customer) =>
+                      _isNew
+                          ? <Widget>[
+                              const SizedBox(height: SpaceTokens.space8),
+                              _ExistingCustomer(
+                                customer: customer,
+                                onUse: () => context.pushReplacement(
+                                  CustomerFormScreen.editPath(customer.id),
+                                ),
+                              ),
+                            ]
+                          : const <Widget>[],
+                  },
 
                   if (_duplicate != null) ...<Widget>[
                     const SizedBox(height: SpaceTokens.space8),
@@ -270,6 +298,58 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+/// The customer already holding the number, offered for reuse.
+///
+/// The order count is what lets a driver recognise whether this is the person
+/// they mean, faster than a name alone — two Amines are common, one with
+/// forty orders is not.
+class _ExistingCustomer extends StatelessWidget {
+  const _ExistingCustomer({required this.customer, required this.onUse});
+
+  final Customer customer;
+  final VoidCallback onUse;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppL10n l10n = AppL10n.of(context);
+    final ColorTokens colors = context.colors;
+
+    return Container(
+      key: const Key('customerForm.existing'),
+      padding: const EdgeInsets.all(SpaceTokens.space12),
+      decoration: BoxDecoration(
+        color: colors.accentSubtle,
+        borderRadius: BorderRadius.circular(RadiusTokens.small),
+        border: Border.all(color: colors.accent),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppText(l10n.customerLookupExisting, AppTextStyle.label),
+          const SizedBox(height: SpaceTokens.space4),
+          AppText(customer.displayName, AppTextStyle.body),
+          AppText(
+            l10n.customerLookupOrders(customer.totalOrders),
+            AppTextStyle.caption,
+            color: colors.textSecondary,
+          ),
+          const SizedBox(height: SpaceTokens.space8),
+          SizedBox(
+            width: double.infinity,
+            // The next action, and the largest thing in this card.
+            height: 48,
+            child: FilledButton(
+              key: const Key('customerForm.useExisting'),
+              onPressed: onUse,
+              child: AppText(l10n.customerLookupUse, AppTextStyle.label),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

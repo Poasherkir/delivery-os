@@ -196,4 +196,25 @@ class AppL10nAr extends AppL10n {
 
   @override
   String get customerDeleted => 'تم حذف الزبون.';
+
+  @override
+  String get customerLookupExisting => 'هذا الزبون موجود عندك';
+
+  @override
+  String customerLookupOrders(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلب',
+      many: '$count طلبًا',
+      few: '$count طلبات',
+      two: 'طلبان',
+      one: 'طلب واحد',
+      zero: 'لا توجد طلبات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get customerLookupUse => 'استخدم هذا الزبون';
 }

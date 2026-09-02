@@ -199,4 +199,22 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get customerDeleted => 'Client supprimé.';
+
+  @override
+  String get customerLookupExisting => 'Vous avez déjà ce client';
+
+  @override
+  String customerLookupOrders(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count commandes',
+      one: '1 commande',
+      zero: 'Aucune commande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get customerLookupUse => 'Utiliser ce client';
 }

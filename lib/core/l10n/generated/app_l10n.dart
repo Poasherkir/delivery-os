@@ -456,6 +456,24 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Client supprimé.'**
   String get customerDeleted;
+
+  /// Heading on the card shown when the number typed already belongs to someone. Phrased as a fact the driver owns rather than as a warning — finding an existing customer is the good outcome, because it saves retyping a name and an address.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déjà ce client'**
+  String get customerLookupExisting;
+
+  /// Order count on the existing-customer card. It is the fastest way for a driver to recognise whether this is the person they mean.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucune commande} =1{1 commande} other{{count} commandes}}'**
+  String customerLookupOrders(int count);
+
+  /// One tap to reuse the existing customer instead of creating a second record for the same person.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser ce client'**
+  String get customerLookupUse;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
