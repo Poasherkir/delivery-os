@@ -427,7 +427,7 @@ the correct answer for them.
 | Ask about domain rules | soft — judgement |
 | Never pipe a gate command | soft — tool choice |
 | Formatting vs checking | soft — tool choice |
-| Codepoints, never pasted | soft — **convertible**: scan string literals for non-ASCII |
+| Codepoints, never pasted | `test/architecture/no_invisible_characters_test.dart` — scans outside comments for invisible and format characters |
 | Write tool, never a heredoc | soft — tool choice |
 | Never `git add -A` | soft — tool choice |
 | Amend only while unpushed | soft — judgement |
