@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/_dev/presentation/token_gallery_screen.dart';
 import '../features/companies/presentation/companies_screen.dart';
+import '../features/customers/presentation/customer_form_screen.dart';
 import '../features/customers/presentation/customers_screen.dart';
 import '../features/history/presentation/history_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -54,6 +55,18 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
           builder: (BuildContext context, GoRouterState state) =>
               _moreScreen(entry),
         ),
+
+      // The customer form, pushed above the shell like every More entry.
+      GoRoute(
+        path: CustomerFormScreen.newPath,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CustomerFormScreen(),
+      ),
+      GoRoute(
+        path: CustomerFormScreen.editPathPattern,
+        builder: (BuildContext context, GoRouterState state) =>
+            CustomerFormScreen(customerId: state.pathParameters['id']),
+      ),
 
       // Debug only. kDebugMode is a compile-time constant, so the route and
       // the screen behind it are tree-shaken out of a release build.

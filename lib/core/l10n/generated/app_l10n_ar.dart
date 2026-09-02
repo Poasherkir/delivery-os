@@ -123,4 +123,77 @@ class AppL10nAr extends AppL10n {
 
   @override
   String get resetDoneAction => 'ابدأ';
+
+  @override
+  String get customersSearchHint => 'ابحث عن زبون';
+
+  @override
+  String get customersEmptyTitle => 'لا يوجد زبائن';
+
+  @override
+  String get customersEmptyBody =>
+      'تظهر بطاقات الزبائن هنا بمجرد تسجيل أول طلب.';
+
+  @override
+  String get customersNoResults => 'لا توجد نتائج لهذا البحث.';
+
+  @override
+  String get customersNew => 'زبون جديد';
+
+  @override
+  String get customerNeedsPhoneReview => 'رقم يحتاج مراجعة';
+
+  @override
+  String get customerFormEditTitle => 'تعديل الزبون';
+
+  @override
+  String get customerFieldName => 'الاسم';
+
+  @override
+  String get customerFieldPhone => 'الهاتف';
+
+  @override
+  String get customerFieldPhoneAlt => 'رقم آخر';
+
+  @override
+  String get customerFieldNotes => 'ملاحظات';
+
+  @override
+  String get customerFieldRisk => 'تنبيه';
+
+  @override
+  String get customerRiskNone => 'بدون';
+
+  @override
+  String get customerRiskWatch => 'اتصل قبل الذهاب';
+
+  @override
+  String get customerRiskProblem => 'زبون مشكل';
+
+  @override
+  String get customerSave => 'حفظ';
+
+  @override
+  String get customerNameRequired => 'الاسم إجباري.';
+
+  @override
+  String get customerPhoneRequired => 'الرقم إجباري.';
+
+  @override
+  String get customerPhoneUnrecognized =>
+      'الرقم غير معروف. سيُحفظ كما هو لتصحيحه لاحقًا.';
+
+  @override
+  String customerDuplicate(String name) {
+    return 'هذا الرقم يخص $name بالفعل.';
+  }
+
+  @override
+  String get customerDuplicateOpen => 'افتح بطاقته';
+
+  @override
+  String get customerDelete => 'حذف هذا الزبون';
+
+  @override
+  String get customerDeleted => 'تم حذف الزبون.';
 }

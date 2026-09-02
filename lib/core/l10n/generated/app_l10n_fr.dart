@@ -126,4 +126,77 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get resetDoneAction => 'Commencer';
+
+  @override
+  String get customersSearchHint => 'Rechercher un client';
+
+  @override
+  String get customersEmptyTitle => 'Aucun client';
+
+  @override
+  String get customersEmptyBody =>
+      'Les clients apparaissent ici dès la première commande saisie.';
+
+  @override
+  String get customersNoResults => 'Aucun résultat pour cette recherche.';
+
+  @override
+  String get customersNew => 'Nouveau client';
+
+  @override
+  String get customerNeedsPhoneReview => 'Numéro à vérifier';
+
+  @override
+  String get customerFormEditTitle => 'Modifier le client';
+
+  @override
+  String get customerFieldName => 'Nom';
+
+  @override
+  String get customerFieldPhone => 'Téléphone';
+
+  @override
+  String get customerFieldPhoneAlt => 'Autre numéro';
+
+  @override
+  String get customerFieldNotes => 'Notes';
+
+  @override
+  String get customerFieldRisk => 'Signalement';
+
+  @override
+  String get customerRiskNone => 'Aucun';
+
+  @override
+  String get customerRiskWatch => 'Appeler avant de partir';
+
+  @override
+  String get customerRiskProblem => 'Client à problème';
+
+  @override
+  String get customerSave => 'Enregistrer';
+
+  @override
+  String get customerNameRequired => 'Le nom est obligatoire.';
+
+  @override
+  String get customerPhoneRequired => 'Le numéro est obligatoire.';
+
+  @override
+  String get customerPhoneUnrecognized =>
+      'Numéro non reconnu. Il sera enregistré tel quel, à corriger plus tard.';
+
+  @override
+  String customerDuplicate(String name) {
+    return 'Ce numéro appartient déjà à $name.';
+  }
+
+  @override
+  String get customerDuplicateOpen => 'Ouvrir sa fiche';
+
+  @override
+  String get customerDelete => 'Supprimer ce client';
+
+  @override
+  String get customerDeleted => 'Client supprimé.';
 }

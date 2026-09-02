@@ -147,5 +147,103 @@
   "resetDoneAction": "Commencer",
   "@resetDoneAction": {
     "description": "Leaves the reset flow into normal startup. The only way off this screen — the reset flow behind it is cleared, since returning would offer to destroy data that no longer exists."
+  },
+  "customersSearchHint": "Rechercher un client",
+  "@customersSearchHint": {
+    "description": "Placeholder in the customer search field. Searches name and number, including a number that never parsed."
+  },
+  "customersEmptyTitle": "Aucun client",
+  "@customersEmptyTitle": {
+    "description": "Empty state on the Customers screen, when none exist at all. Distinct from a search that matched nothing."
+  },
+  "customersEmptyBody": "Les clients apparaissent ici dès la première commande saisie.",
+  "@customersEmptyBody": {
+    "description": "Says where customers come from. A driver does not create customers directly; they arrive with order entry."
+  },
+  "customersNoResults": "Aucun résultat pour cette recherche.",
+  "@customersNoResults": {
+    "description": "A search matched nothing. Deliberately different from customersEmptyTitle: one means try another word, the other means there is nothing yet."
+  },
+  "customersNew": "Nouveau client",
+  "@customersNew": {
+    "description": "Action that opens the create form. Also the create form's own title."
+  },
+  "customerNeedsPhoneReview": "Numéro à vérifier",
+  "@customerNeedsPhoneReview": {
+    "description": "Badge on a customer whose number never parsed and was kept verbatim. Not an error the driver caused — the number is probably a pre-2008 landline our validator does not know."
+  },
+  "customerFormEditTitle": "Modifier le client",
+  "@customerFormEditTitle": {
+    "description": "Title of the form when editing an existing customer."
+  },
+  "customerFieldName": "Nom",
+  "@customerFieldName": {
+    "description": "Form field label."
+  },
+  "customerFieldPhone": "Téléphone",
+  "@customerFieldPhone": {
+    "description": "Form field label for the identity number."
+  },
+  "customerFieldPhoneAlt": "Autre numéro",
+  "@customerFieldPhoneAlt": {
+    "description": "Form field label for the secondary number, which is dial-and-display only and is not part of the identity."
+  },
+  "customerFieldNotes": "Notes",
+  "@customerFieldNotes": {
+    "description": "Form field label. Free text about the customer, such as which floor or when they are home."
+  },
+  "customerFieldRisk": "Signalement",
+  "@customerFieldRisk": {
+    "description": "Form field label for the risk flag. Only ever set by a human — nothing in the app infers it from delivery history."
+  },
+  "customerRiskNone": "Aucun",
+  "@customerRiskNone": {
+    "description": "Risk flag: the default, most customers."
+  },
+  "customerRiskWatch": "Appeler avant de partir",
+  "@customerRiskWatch": {
+    "description": "Risk flag: worth a phone call before setting out. Written as the action to take rather than as a label, because that is what the driver does with it."
+  },
+  "customerRiskProblem": "Client à problème",
+  "@customerRiskProblem": {
+    "description": "Risk flag: repeated refusals or abuse."
+  },
+  "customerSave": "Enregistrer",
+  "@customerSave": {
+    "description": "Primary action on the customer form."
+  },
+  "customerNameRequired": "Le nom est obligatoire.",
+  "@customerNameRequired": {
+    "description": "Validation message."
+  },
+  "customerPhoneRequired": "Le numéro est obligatoire.",
+  "@customerPhoneRequired": {
+    "description": "Validation message. A customer with no number at all cannot be found again."
+  },
+  "customerPhoneUnrecognized": "Numéro non reconnu. Il sera enregistré tel quel, à corriger plus tard.",
+  "@customerPhoneUnrecognized": {
+    "description": "Shown when the number does not parse. Deliberately NOT an error: it does not block saving. A driver in an agency at 07:00 must not be stopped because our validator disagrees with a real landline. States what will happen rather than refusing."
+  },
+  "customerDuplicate": "Ce numéro appartient déjà à {name}.",
+  "@customerDuplicate": {
+    "description": "The number is taken by a live customer. Names them, so the driver can recognise the record rather than going to search for it.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Amine Bensalem"
+      }
+    }
+  },
+  "customerDuplicateOpen": "Ouvrir sa fiche",
+  "@customerDuplicateOpen": {
+    "description": "Action beside customerDuplicate. Opens the existing customer instead of creating a second one."
+  },
+  "customerDelete": "Supprimer ce client",
+  "@customerDelete": {
+    "description": "Soft-deletes the customer. Their orders stay readable, and the number can be added again afterwards."
+  },
+  "customerDeleted": "Client supprimé.",
+  "@customerDeleted": {
+    "description": "Confirmation after a soft delete."
   }
 }

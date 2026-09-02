@@ -318,6 +318,144 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Commencer'**
   String get resetDoneAction;
+
+  /// Placeholder in the customer search field. Searches name and number, including a number that never parsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un client'**
+  String get customersSearchHint;
+
+  /// Empty state on the Customers screen, when none exist at all. Distinct from a search that matched nothing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun client'**
+  String get customersEmptyTitle;
+
+  /// Says where customers come from. A driver does not create customers directly; they arrive with order entry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les clients apparaissent ici dès la première commande saisie.'**
+  String get customersEmptyBody;
+
+  /// A search matched nothing. Deliberately different from customersEmptyTitle: one means try another word, the other means there is nothing yet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun résultat pour cette recherche.'**
+  String get customersNoResults;
+
+  /// Action that opens the create form. Also the create form's own title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau client'**
+  String get customersNew;
+
+  /// Badge on a customer whose number never parsed and was kept verbatim. Not an error the driver caused — the number is probably a pre-2008 landline our validator does not know.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro à vérifier'**
+  String get customerNeedsPhoneReview;
+
+  /// Title of the form when editing an existing customer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le client'**
+  String get customerFormEditTitle;
+
+  /// Form field label.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get customerFieldName;
+
+  /// Form field label for the identity number.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléphone'**
+  String get customerFieldPhone;
+
+  /// Form field label for the secondary number, which is dial-and-display only and is not part of the identity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre numéro'**
+  String get customerFieldPhoneAlt;
+
+  /// Form field label. Free text about the customer, such as which floor or when they are home.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notes'**
+  String get customerFieldNotes;
+
+  /// Form field label for the risk flag. Only ever set by a human — nothing in the app infers it from delivery history.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signalement'**
+  String get customerFieldRisk;
+
+  /// Risk flag: the default, most customers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get customerRiskNone;
+
+  /// Risk flag: worth a phone call before setting out. Written as the action to take rather than as a label, because that is what the driver does with it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appeler avant de partir'**
+  String get customerRiskWatch;
+
+  /// Risk flag: repeated refusals or abuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client à problème'**
+  String get customerRiskProblem;
+
+  /// Primary action on the customer form.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get customerSave;
+
+  /// Validation message.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le nom est obligatoire.'**
+  String get customerNameRequired;
+
+  /// Validation message. A customer with no number at all cannot be found again.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le numéro est obligatoire.'**
+  String get customerPhoneRequired;
+
+  /// Shown when the number does not parse. Deliberately NOT an error: it does not block saving. A driver in an agency at 07:00 must not be stopped because our validator disagrees with a real landline. States what will happen rather than refusing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro non reconnu. Il sera enregistré tel quel, à corriger plus tard.'**
+  String get customerPhoneUnrecognized;
+
+  /// The number is taken by a live customer. Names them, so the driver can recognise the record rather than going to search for it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro appartient déjà à {name}.'**
+  String customerDuplicate(String name);
+
+  /// Action beside customerDuplicate. Opens the existing customer instead of creating a second one.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir sa fiche'**
+  String get customerDuplicateOpen;
+
+  /// Soft-deletes the customer. Their orders stay readable, and the number can be added again afterwards.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ce client'**
+  String get customerDelete;
+
+  /// Confirmation after a soft delete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client supprimé.'**
+  String get customerDeleted;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
