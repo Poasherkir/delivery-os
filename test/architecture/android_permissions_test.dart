@@ -4,14 +4,12 @@ import 'package:test/test.dart';
 
 /// The permissions this app is allowed to declare, and nothing else.
 ///
-/// **Empty today.** Each entry added here is a deliberate, reviewable line in a
-/// diff — which is the whole point, because invariant 11 is not "no permissions
-/// forever". It is "background location and geofencing never arrive quietly".
+/// Each entry is a deliberate, reviewable line in a diff — which is the whole
+/// point, because invariant 11 is not "no permissions forever". It is
+/// "background location and geofencing never arrive quietly".
 ///
-/// Expected additions, so nobody treats a first failure as the guard being
-/// wrong:
+/// Still expected, so nobody treats a future failure as the guard being wrong:
 ///
-/// * `android.permission.CAMERA` at M1, for the barcode scanner.
 /// * `android.permission.ACCESS_FINE_LOCATION` and
 ///   `android.permission.FOREGROUND_SERVICE_LOCATION` at M4, foreground only
 ///   and only while a route is active.
@@ -20,7 +18,11 @@ import 'package:test/test.dart';
 /// `ACCESS_BACKGROUND_LOCATION`. That is invariant 11, and it is listed
 /// separately below so its absence is asserted rather than merely implied by
 /// the allowlist.
-const Set<String> allowedPermissions = <String>{};
+const Set<String> allowedPermissions = <String>{
+  // M1-07, the barcode scanner. Frames are read for a barcode and discarded;
+  // nothing is written to storage.
+  'android.permission.CAMERA',
+};
 
 /// Permissions that are a design violation regardless of what the allowlist
 /// says. Adding one of these to [allowedPermissions] would not be enough — this

@@ -11,6 +11,21 @@
       dataExtractionRules covers both cloud backup and device-to-device
       transfer on 12 and above, which allowBackup does not.
     -->
+    <!--
+      The barcode scanner (M1-07), and nothing else. A driver scans the label
+      on a parcel; the frames are read for a barcode and discarded, never
+      written to storage.
+
+      This is the app's first permission and it is deliberately narrow.
+      `android_permissions_test` holds the allowlist, so this line and the one
+      beside it there are the review — a permission cannot arrive quietly.
+
+      Not requested, and forbidden by that same test: ACCESS_BACKGROUND_LOCATION.
+      Invariant 11 is that background location never arrives, and CAMERA is not
+      a step toward it.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
