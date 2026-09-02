@@ -106,6 +106,7 @@ void main() {
       'Stop and ask only for these six', // standing authority
       'Allowlist over denylist',
       'A guard that must be deleted the first time it fires',
+      'Correct by accident is not correct', // M1-07
     ]) {
       test('"$rule"', () {
         expect(

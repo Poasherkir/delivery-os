@@ -172,6 +172,14 @@ full gate, as run for M0.
 - **Raw JSON for anything versioned or frozen.** No typed converter on data that
   must outlive the model that wrote it.
 - **Fail loudly on data this app wrote itself.** No silent defaults.
+- **Correct by accident is not correct. Pin it when you find it.** Anything
+  load-bearing that is currently right only because a framework default happens
+  to agree with us gets named explicitly, because the default can change and it
+  will change silently. Naming it costs a line and survives the day it flips.
+  Found at M1-07: Arabic rendered Western digits, which is right for the Maghreb
+  and wrong for the Gulf, and we were getting it from `MaterialLocalizations`
+  rather than from a decision. Same shape as spelling out `validateDropped` and
+  `validateColumnConstraints` instead of inheriting them.
 
 ---
 
