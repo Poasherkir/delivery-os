@@ -4,6 +4,7 @@ import 'package:delivery_os/core/time/clock.dart';
 import 'package:delivery_os/core/utils/uuid_v7.dart';
 import 'package:delivery_os/data/db/app_database.dart';
 import 'package:delivery_os/data/db/bootstrap.dart';
+import 'package:delivery_os/data/db/daos/address_dao.dart';
 import 'package:delivery_os/data/db/daos/customer_dao.dart';
 import 'package:delivery_os/data/db/daos/user_settings_dao.dart';
 import 'package:delivery_os/domain/value_objects/customer_risk_flag.dart';
@@ -58,11 +59,30 @@ final class _Fixture {
   final UuidV7Generator uuid;
   final String userId;
 
+  /// Carried from prepare to invoke for the mutations that need an existing
+  /// address to act on.
+  CustomerAddress? pendingAddress;
+
   CustomerDao get customers => CustomerDao(
     database: db,
     clock: clock,
     uuid: uuid,
     deviceId: 'guard-device',
+  );
+
+  AddressDao get addresses => AddressDao(
+    database: db,
+    clock: clock,
+    uuid: uuid,
+    deviceId: 'guard-device',
+  );
+
+  /// An address needs a commune, which needs a wilaya, and foreign keys are on.
+  Future<CustomerAddress> anAddress(Customer customer) => addresses.create(
+    ownerId: userId,
+    customerId: customer.id,
+    wilayaCode: 16,
+    communeId: 1601,
   );
 
   UserSettingsDao get settings => UserSettingsDao(
@@ -130,6 +150,48 @@ final List<_Mutation> _mutations = <_Mutation>[
     prepare: null,
     invoke: (_Fixture f, Customer? _) => f.settings.setLocale('fr'),
   ),
+  (
+    dao: 'AddressDao',
+    method: 'create',
+    prepare: (_Fixture f) => f.aCustomer('0550777888'),
+    invoke: (_Fixture f, Customer? c) => f.anAddress(c!),
+  ),
+  (
+    dao: 'AddressDao',
+    method: 'makePrimary',
+    // The address is made in prepare, not in invoke: creating it queues a row
+    // of its own, and counting that would assert "two rows appeared" rather
+    // than "this method queued one".
+    prepare: (_Fixture f) async {
+      final Customer c = await f.aCustomer('0550777999');
+      f.pendingAddress = await f.anAddress(c);
+      return c;
+    },
+    invoke: (_Fixture f, Customer? _) =>
+        f.addresses.makePrimary(f.pendingAddress!),
+  ),
+  (
+    dao: 'AddressDao',
+    method: 'edit',
+    prepare: (_Fixture f) async {
+      final Customer c = await f.aCustomer('0550888111');
+      f.pendingAddress = await f.anAddress(c);
+      return c;
+    },
+    invoke: (_Fixture f, Customer? _) =>
+        f.addresses.edit(current: f.pendingAddress!, detail: 'Bt 12'),
+  ),
+  (
+    dao: 'AddressDao',
+    method: 'softDelete',
+    prepare: (_Fixture f) async {
+      final Customer c = await f.aCustomer('0550888222');
+      f.pendingAddress = await f.anAddress(c);
+      return c;
+    },
+    invoke: (_Fixture f, Customer? _) =>
+        f.addresses.softDelete(f.pendingAddress!),
+  ),
 ];
 
 /// Methods that write but must not queue, each with the reason it is exempt.
@@ -146,6 +208,14 @@ void main() {
     final FixedClock clock = FixedClock(DateTime.utc(2026, 9, 1, 7));
     final UuidV7Generator uuid = UuidV7Generator(clock: clock);
     final User user = await AppBootstrap(db, clock, uuid).ensureUser();
+    // Foreign keys are on, so an address needs somewhere to point.
+    await db.customStatement(
+      "INSERT INTO wilayas (code, name_fr, name_ar) VALUES (16, 'Alger', 'x')",
+    );
+    await db.customStatement(
+      'INSERT INTO communes (id, wilaya_code, name_fr, name_ar) '
+      "VALUES (1601, 16, 'Bab Ezzouar', 'x')",
+    );
     fixture = _Fixture(db, clock, uuid, user.id);
   });
 
