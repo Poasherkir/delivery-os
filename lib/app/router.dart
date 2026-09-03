@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/_dev/presentation/token_gallery_screen.dart';
 import '../features/companies/presentation/companies_screen.dart';
+import '../features/companies/presentation/company_form_screen.dart';
 import '../features/customers/presentation/customer_form_screen.dart';
 import '../features/customers/presentation/customers_screen.dart';
 import '../features/history/presentation/history_screen.dart';
@@ -12,6 +13,7 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/ingestion/presentation/scanner_screen.dart';
 import '../features/money/presentation/money_screen.dart';
 import '../features/more/presentation/more_screen.dart';
+import '../features/orders/presentation/order_entry_screen.dart';
 import '../features/orders/presentation/orders_screen.dart';
 import '../features/route/presentation/route_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -76,6 +78,24 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: ScannerScreen.path,
         builder: (BuildContext context, GoRouterState state) =>
             const ScannerScreen(),
+      ),
+
+      // Order entry, above the shell for the same reason: it is a modal flow
+      // launched from Orders, not a place the driver navigates to. The scanned
+      // tracking number arrives as `extra` rather than as a path parameter — a
+      // barcode can hold anything, and a URL is not the place to find out what.
+      GoRoute(
+        path: OrderEntryScreen.path,
+        builder: (BuildContext context, GoRouterState state) =>
+            OrderEntryScreen(scannedTracking: state.extra as String?),
+      ),
+
+      // The company form, reachable from the entry screen's empty state and
+      // from the companies list.
+      GoRoute(
+        path: CompanyFormScreen.newPath,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CompanyFormScreen(),
       ),
 
       // Debug only. kDebugMode is a compile-time constant, so the route and
