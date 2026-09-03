@@ -243,4 +243,103 @@ class AppL10nAr extends AppL10n {
   @override
   String get scannerUnavailableBody =>
       'لم يبدأ الماسح. أدخل الرقم يدويًا للمتابعة.';
+
+  @override
+  String get orderNewTitle => 'طرد جديد';
+
+  @override
+  String get orderFieldTracking => 'رقم التتبع';
+
+  @override
+  String get orderFieldPhone => 'الهاتف';
+
+  @override
+  String get orderFieldName => 'الاسم';
+
+  @override
+  String get orderFieldCommune => 'البلدية';
+
+  @override
+  String get orderFieldAddress => 'العنوان';
+
+  @override
+  String get orderFieldCod => 'المبلغ المطلوب';
+
+  @override
+  String get orderFieldNotes => 'ملاحظة';
+
+  @override
+  String get orderFieldDelivery => 'التوصيل';
+
+  @override
+  String get orderDeliveryHome => 'إلى المنزل';
+
+  @override
+  String get orderDeliveryStopdesk => 'نقطة الاستلام';
+
+  @override
+  String get orderSave => 'حفظ';
+
+  @override
+  String get orderSaveAndNext => 'حفظ ومسح التالي';
+
+  @override
+  String get orderSaved => 'تم تسجيل الطرد.';
+
+  @override
+  String get orderTrackingRequired => 'رقم التتبع إجباري.';
+
+  @override
+  String get orderDuplicateTracking => 'هذا الطرد مسجّل بالفعل.';
+
+  @override
+  String get orderDuplicateOpen => 'افتح الطرد';
+
+  @override
+  String get orderCompanyLabel => 'الشركة';
+
+  @override
+  String get orderCompanyChange => 'تغيير';
+
+  @override
+  String get orderNoCompanyTitle => 'لا توجد شركة';
+
+  @override
+  String get orderNoCompanyBody => 'أضف الشركة التي سلّمتك هذه الطرود.';
+
+  @override
+  String get orderNoCompanyAction => 'إضافة شركة';
+
+  @override
+  String get orderCommuneSearchHint => 'ابحث عن بلدية';
+
+  @override
+  String get orderCommuneNoResults => 'لا توجد بلدية مطابقة.';
+
+  @override
+  String get companyNewTitle => 'شركة جديدة';
+
+  @override
+  String get companyFieldName => 'الاسم';
+
+  @override
+  String get companyFieldPhone => 'الهاتف';
+
+  @override
+  String get companyFieldNotes => 'ملاحظة';
+
+  @override
+  String get companySave => 'حفظ';
+
+  @override
+  String get companyNameRequired => 'الاسم إجباري.';
+
+  @override
+  String get companiesEmptyTitle => 'لا توجد شركات';
+
+  @override
+  String get companiesEmptyBody => 'أضف الشركات التي توصّل طرودها.';
+
+  @override
+  String get companiesNew => 'شركة جديدة';
 }

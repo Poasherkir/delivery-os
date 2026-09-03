@@ -522,6 +522,204 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Le scanner n\'a pas pu démarrer. Saisissez le numéro à la main pour continuer.'**
   String get scannerUnavailableBody;
+
+  /// Title of the order entry screen. `colis`, not `commande`: a commande is what the customer placed on a website, a colis is the object in the driver's hand with the tracking number printed on it, and it is the unit counted at the agency in the morning. The entity stays `Order` in code; the screen uses the driver's word.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau colis'**
+  String get orderNewTitle;
+
+  /// The tracking number, pre-filled from a scan. The only field this form requires.
+  ///
+  /// In fr, this message translates to:
+  /// **'N° de suivi'**
+  String get orderFieldTracking;
+
+  /// The customer's number, and the first field focused. Typing it looks the customer up as it goes, which is what saves retyping a name and an address.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléphone'**
+  String get orderFieldPhone;
+
+  /// The customer's name. Shown only when the number belongs to nobody yet — an existing customer is a card, not a set of fields to retype.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get orderFieldName;
+
+  /// The commune of the delivery address. Opens a searchable list; a driver reading a French label and a driver typing Arabic must find the same commune.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commune'**
+  String get orderFieldCommune;
+
+  /// Free text under the commune: the cité, the block, the floor — what a driver actually uses to find a door. Without it a new customer's order has only a commune centroid, which is confidence tier 1 and clusters as a zone stop rather than routing to an address.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse'**
+  String get orderFieldAddress;
+
+  /// The cash to collect at the door, in dinars. The driver's phrase for the money in their hand rather than the manifest's 'montant COD'.
+  ///
+  /// In fr, this message translates to:
+  /// **'À encaisser'**
+  String get orderFieldCod;
+
+  /// Anything the driver wants to remember about this parcel. Optional and last.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remarque'**
+  String get orderFieldNotes;
+
+  /// Label above the home / stop-desk toggle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Livraison'**
+  String get orderFieldDelivery;
+
+  /// Delivered to the customer's address. The default, and the majority of parcels.
+  ///
+  /// In fr, this message translates to:
+  /// **'À domicile'**
+  String get orderDeliveryHome;
+
+  /// Collected by the customer from an agency desk. Roughly half of Algerian COD volume, it cannot be derived from anything else — it comes off the label — and it must never enter the optimized route. One tap, on a minority of parcels.
+  ///
+  /// In fr, this message translates to:
+  /// **'Point relais'**
+  String get orderDeliveryStopdesk;
+
+  /// Saves the parcel and closes the form.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get orderSave;
+
+  /// Saves and reopens the scanner for the next parcel. The largest thing on the screen, because it is the loop the four-minute gate measures.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer et scanner'**
+  String get orderSaveAndNext;
+
+  /// Confirmation after a save. `colis` for the same reason as the title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Colis enregistré.'**
+  String get orderSaved;
+
+  /// The only blocking validation on this form. Everything else is optional on purpose: a driver standing in an agency at 07:00 must not be stopped by a field, and a parcel with no customer yet is enterable even though it is not deliverable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le n° de suivi est obligatoire.'**
+  String get orderTrackingRequired;
+
+  /// Shown when the tracking number is already in this company's orders. Stated as a fact, not an error — scanning the same parcel twice is the ordinary way this happens on a screen the driver hits fifteen times a morning, and no wording blames them for it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce colis est déjà dans la tournée.'**
+  String get orderDuplicateTracking;
+
+  /// One tap to the parcel that already carries the number, instead of making the driver go and look for it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le colis'**
+  String get orderDuplicateOpen;
+
+  /// Names the company today's parcels came from. Chosen once per batch and never per order, so it is a header on this form rather than a field in it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Société'**
+  String get orderCompanyLabel;
+
+  /// Switches the company, which switches the batch. A driver working two companies in one day has two batches and one route.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer'**
+  String get orderCompanyChange;
+
+  /// Empty state on the first launch, before any company exists. Nothing is seeded — an invented company would end up in a settlement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune société'**
+  String get orderNoCompanyTitle;
+
+  /// Says what a company is in the driver's terms — the agency that handed over the parcels — rather than defining a database entity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez la société qui vous a remis ces colis.'**
+  String get orderNoCompanyBody;
+
+  /// Leads out of the empty state into company creation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter une société'**
+  String get orderNoCompanyAction;
+
+  /// Search field at the top of the commune picker. Matches either name, so the French label on a parcel and an Arabic spelling find the same commune.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chercher une commune'**
+  String get orderCommuneSearchHint;
+
+  /// Shown when a commune search matches nothing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune commune ne correspond.'**
+  String get orderCommuneNoResults;
+
+  /// Title of the company form.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle société'**
+  String get companyNewTitle;
+
+  /// The company's name, and the only thing a driver has to type.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get companyFieldName;
+
+  /// Free text, not a validated number: agencies hand out a mobile and a landline together, which is useful to a driver and is not a phone number.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléphone'**
+  String get companyFieldPhone;
+
+  /// Anything worth remembering about this company.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remarque'**
+  String get companyFieldNotes;
+
+  /// Saves the company and returns to whatever needed it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get companySave;
+
+  /// The only validation on the company form.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le nom est obligatoire.'**
+  String get companyNameRequired;
+
+  /// Empty state on the companies screen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune société'**
+  String get companiesEmptyTitle;
+
+  /// Explains what belongs on this screen in the driver's terms.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez les sociétés dont vous livrez les colis.'**
+  String get companiesEmptyBody;
+
+  /// Opens the company form from the companies screen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle société'**
+  String get companiesNew;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

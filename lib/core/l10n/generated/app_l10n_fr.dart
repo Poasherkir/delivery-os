@@ -243,4 +243,105 @@ class AppL10nFr extends AppL10n {
   @override
   String get scannerUnavailableBody =>
       'Le scanner n\'a pas pu démarrer. Saisissez le numéro à la main pour continuer.';
+
+  @override
+  String get orderNewTitle => 'Nouveau colis';
+
+  @override
+  String get orderFieldTracking => 'N° de suivi';
+
+  @override
+  String get orderFieldPhone => 'Téléphone';
+
+  @override
+  String get orderFieldName => 'Nom';
+
+  @override
+  String get orderFieldCommune => 'Commune';
+
+  @override
+  String get orderFieldAddress => 'Adresse';
+
+  @override
+  String get orderFieldCod => 'À encaisser';
+
+  @override
+  String get orderFieldNotes => 'Remarque';
+
+  @override
+  String get orderFieldDelivery => 'Livraison';
+
+  @override
+  String get orderDeliveryHome => 'À domicile';
+
+  @override
+  String get orderDeliveryStopdesk => 'Point relais';
+
+  @override
+  String get orderSave => 'Enregistrer';
+
+  @override
+  String get orderSaveAndNext => 'Enregistrer et scanner';
+
+  @override
+  String get orderSaved => 'Colis enregistré.';
+
+  @override
+  String get orderTrackingRequired => 'Le n° de suivi est obligatoire.';
+
+  @override
+  String get orderDuplicateTracking => 'Ce colis est déjà dans la tournée.';
+
+  @override
+  String get orderDuplicateOpen => 'Voir le colis';
+
+  @override
+  String get orderCompanyLabel => 'Société';
+
+  @override
+  String get orderCompanyChange => 'Changer';
+
+  @override
+  String get orderNoCompanyTitle => 'Aucune société';
+
+  @override
+  String get orderNoCompanyBody =>
+      'Ajoutez la société qui vous a remis ces colis.';
+
+  @override
+  String get orderNoCompanyAction => 'Ajouter une société';
+
+  @override
+  String get orderCommuneSearchHint => 'Chercher une commune';
+
+  @override
+  String get orderCommuneNoResults => 'Aucune commune ne correspond.';
+
+  @override
+  String get companyNewTitle => 'Nouvelle société';
+
+  @override
+  String get companyFieldName => 'Nom';
+
+  @override
+  String get companyFieldPhone => 'Téléphone';
+
+  @override
+  String get companyFieldNotes => 'Remarque';
+
+  @override
+  String get companySave => 'Enregistrer';
+
+  @override
+  String get companyNameRequired => 'Le nom est obligatoire.';
+
+  @override
+  String get companiesEmptyTitle => 'Aucune société';
+
+  @override
+  String get companiesEmptyBody =>
+      'Ajoutez les sociétés dont vous livrez les colis.';
+
+  @override
+  String get companiesNew => 'Nouvelle société';
 }
