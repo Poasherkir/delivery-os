@@ -23,6 +23,7 @@ final class OrderSummary {
     required this.deliveryType,
     required this.codAmount,
     required this.companyName,
+    required this.serviceDate,
     this.customerName,
     this.communeNameFr,
     this.communeNameAr,
@@ -38,6 +39,14 @@ final class OrderSummary {
   /// Which company's manifest this came off. Shown when the day has more than
   /// one, and a driver working two in a morning needs to tell them apart.
   final String companyName;
+
+  /// The business day this parcel belongs to, `YYYY-MM-DD`.
+  ///
+  /// Comes off the batch, which the join already reaches. Today's list has no
+  /// use for it — every row on it is today — but a customer's history is a
+  /// list of days, and the alternative is a second read model differing by one
+  /// field.
+  final String serviceDate;
 
   /// Null when the parcel was entered before anyone was attached to it.
   final String? customerName;
@@ -75,5 +84,6 @@ final class OrderSummary {
   /// commune and their street do not appear: together they are a household,
   /// and this string can reach a log line.
   @override
-  String toString() => 'OrderSummary($id, $trackingNumber, ${status.name})';
+  String toString() =>
+      'OrderSummary($id, $trackingNumber, $serviceDate, ${status.name})';
 }

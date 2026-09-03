@@ -17,6 +17,7 @@ OrderSummary aSummary({
   deliveryType: DeliveryType.home,
   codAmount: Centimes.zero,
   companyName: 'Yalidine',
+  serviceDate: '2026-09-03',
   customerName: customerName,
   communeNameFr: communeFr,
   communeNameAr: communeAr,
@@ -89,11 +90,12 @@ void main() {
   });
 
   group('toString', () {
-    test('names the parcel', () {
+    test('names the parcel and the day', () {
       final String rendered = aSummary(id: 'o1').toString();
 
       expect(rendered, contains('o1'));
       expect(rendered, contains('YAL-0001'));
+      expect(rendered, contains('2026-09-03'));
       expect(rendered, contains('pending'));
     });
 

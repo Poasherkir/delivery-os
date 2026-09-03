@@ -4,13 +4,17 @@ import 'package:delivery_os/data/db/app_database.dart' as db;
 import 'package:delivery_os/data/db/bootstrap.dart';
 import 'package:delivery_os/data/db/daos/batch_dao.dart';
 import 'package:delivery_os/data/db/daos/company_dao.dart';
+import 'package:delivery_os/data/db/daos/customer_dao.dart';
 import 'package:delivery_os/data/db/daos/order_dao.dart';
+import 'package:delivery_os/data/repositories/drift_customer_repository.dart';
 import 'package:delivery_os/data/repositories/drift_order_repository.dart';
+import 'package:delivery_os/domain/entities/customer_history.dart';
 import 'package:delivery_os/domain/entities/order.dart';
 import 'package:delivery_os/domain/entities/order_summary.dart';
 import 'package:delivery_os/domain/repositories/order_repository.dart';
 import 'package:delivery_os/domain/state/order_status.dart';
 import 'package:delivery_os/domain/value_objects/centimes.dart';
+import 'package:delivery_os/domain/value_objects/phone_e164.dart';
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -18,6 +22,7 @@ void main() {
   late db.AppDatabase database;
   late FixedClock clock;
   late OrderRepository repo;
+  late String ownerId;
   late String companyId;
   late String batchId;
 
@@ -27,6 +32,7 @@ void main() {
     clock = FixedClock(DateTime.utc(2026, 9, 3, 7));
     final UuidV7Generator uuid = UuidV7Generator(clock: clock);
     final db.User user = await AppBootstrap(database, clock, uuid).ensureUser();
+    ownerId = user.id;
 
     companyId = (await CompanyDao(
       database: database,
@@ -220,6 +226,91 @@ void main() {
       expect(row.codAmount, const Centimes(450000));
       expect(row.companyName, 'Yalidine');
       expect(row.needsCustomer, isTrue);
+    });
+  });
+  group('historyForCustomer', () {
+    late String customerId;
+
+    setUp(() async {
+      customerId = (await DriftCustomerRepository(
+        dao: CustomerDao(
+          database: database,
+          clock: clock,
+          uuid: UuidV7Generator(clock: clock),
+          deviceId: 'device-under-test',
+        ),
+        ownerId: ownerId,
+      ).create(phone: PhoneE164.parse('0550123456'), displayName: 'Amine')).id;
+    });
+
+    Future<void> addOrders(int howMany) async {
+      for (int i = 0; i < howMany; i++) {
+        await repo.create(
+          batchId: batchId,
+          companyId: companyId,
+          trackingNumber: 'YAL-${1000 + i}',
+          customerId: customerId,
+        );
+      }
+    }
+
+    test('reports the window and the true total separately', () async {
+      await addOrders(5);
+
+      final CustomerHistory history = await repo.historyForCustomer(
+        customerId,
+        limit: 3,
+      );
+
+      expect(history.recent, hasLength(3));
+      expect(history.total, 5);
+      expect(history.isWindowed, isTrue);
+      expect(history.hidden, 2);
+    });
+
+    test('and is not windowed when everything fits', () async {
+      await addOrders(3);
+
+      final CustomerHistory history = await repo.historyForCustomer(
+        customerId,
+        limit: 50,
+      );
+
+      expect(history.isWindowed, isFalse);
+      expect(history.hidden, 0);
+    });
+
+    test('defaults to the bounded window, never the whole history', () async {
+      // The default matters more than any other value here: it is what a
+      // driver gets for opening the screen, and it is the one that must not
+      // be unbounded.
+      expect(CustomerHistory.defaultWindow, 50);
+      await addOrders(60);
+
+      final CustomerHistory history = await repo.historyForCustomer(customerId);
+
+      expect(history.recent, hasLength(CustomerHistory.defaultWindow));
+      expect(history.total, 60);
+    });
+
+    test('a null limit is the explicit see-all', () async {
+      await addOrders(60);
+
+      final CustomerHistory history = await repo.historyForCustomer(
+        customerId,
+        limit: null,
+      );
+
+      expect(history.recent, hasLength(60));
+      expect(history.isWindowed, isFalse);
+    });
+
+    test('a customer with no parcels reads as empty', () async {
+      final CustomerHistory history = await repo.historyForCustomer(customerId);
+
+      expect(history.isEmpty, isTrue);
+      expect(history.recent, isEmpty);
+      expect(history.total, 0);
     });
   });
 }

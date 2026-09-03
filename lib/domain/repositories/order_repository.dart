@@ -1,3 +1,4 @@
+import '../entities/customer_history.dart';
 import '../entities/order.dart';
 import '../entities/order_summary.dart';
 import '../value_objects/centimes.dart';
@@ -40,6 +41,16 @@ abstract interface class OrderRepository {
   /// companies in one morning has two batches and one list — the batch is the
   /// settlement unit, not a thing to navigate between.
   Future<List<OrderSummary>> summariesForDate({String? serviceDate});
+
+  /// One customer's parcels, most recent first, with a count of all of them.
+  ///
+  /// [limit] defaults to [CustomerHistory.defaultWindow]; null loads
+  /// everything and is only reached by an explicit "see all". A detail view a
+  /// driver taps into mid-round must not open by fetching a year of history.
+  Future<CustomerHistory> historyForCustomer(
+    String customerId, {
+    int? limit = CustomerHistory.defaultWindow,
+  });
 
   /// The order carrying this tracking number for this company, or null.
   Future<Order?> findByTracking({

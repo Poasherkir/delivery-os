@@ -1,5 +1,6 @@
 import '../../core/time/clock.dart';
 import '../../core/time/service_day.dart';
+import '../../domain/entities/customer_history.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/entities/order_summary.dart';
 import '../../domain/repositories/order_repository.dart';
@@ -43,22 +44,7 @@ final class DriftOrderRepository implements OrderRepository {
       serviceDate: serviceDate ?? ServiceDay.from(_clock.nowUtc()),
     );
 
-    return rows
-        .map(
-          (OrderSummaryRow r) => OrderSummary(
-            id: r.id,
-            trackingNumber: r.trackingNumber,
-            status: r.status,
-            deliveryType: r.deliveryType,
-            codAmount: r.codAmount,
-            companyName: r.companyName,
-            customerName: r.customerName,
-            communeNameFr: r.communeNameFr,
-            communeNameAr: r.communeNameAr,
-            addressDetail: r.addressDetail,
-          ),
-        )
-        .toList();
+    return rows.map(_summary).toList();
   }
 
   @override
@@ -127,6 +113,41 @@ final class DriftOrderRepository implements OrderRepository {
     }
     await _dao.softDelete(row);
   }
+
+  @override
+  Future<CustomerHistory> historyForCustomer(
+    String customerId, {
+    int? limit = CustomerHistory.defaultWindow,
+  }) async {
+    // Two queries, deliberately. The count is what lets the screen say it is
+    // showing part of the history; deriving it from the window's length would
+    // make a full page indistinguishable from a truncated one.
+    final List<OrderSummaryRow> rows = await _dao.historyForCustomer(
+      ownerId: _ownerId,
+      customerId: customerId,
+      limit: limit,
+    );
+    final int total = await _dao.historyCountForCustomer(
+      ownerId: _ownerId,
+      customerId: customerId,
+    );
+
+    return CustomerHistory(recent: rows.map(_summary).toList(), total: total);
+  }
+
+  OrderSummary _summary(OrderSummaryRow r) => OrderSummary(
+    id: r.id,
+    trackingNumber: r.trackingNumber,
+    status: r.status,
+    deliveryType: r.deliveryType,
+    codAmount: r.codAmount,
+    companyName: r.companyName,
+    serviceDate: r.serviceDate,
+    customerName: r.customerName,
+    communeNameFr: r.communeNameFr,
+    communeNameAr: r.communeNameAr,
+    addressDetail: r.addressDetail,
+  );
 
   Order _toDomain(db.Order row) => Order(
     id: row.id,

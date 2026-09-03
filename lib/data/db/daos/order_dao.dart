@@ -109,11 +109,105 @@ final class OrderDao {
   Future<List<OrderSummaryRow>> summariesForDate({
     required String ownerId,
     required String serviceDate,
+  }) {
+    return _summaries(
+      where: 'o.owner_id = ?1 AND b.service_date = ?2',
+      variables: <Variable<Object>>[
+        Variable<String>(ownerId),
+        Variable<String>(serviceDate),
+      ],
+    );
+  }
+
+  /// One customer's live parcels, most recent first, at most [limit] of them.
+  ///
+  /// **Windowed on purpose.** A customer the driver has delivered to for a year
+  /// has a few hundred orders, and the profile screen is a detail view tapped
+  /// into mid-round rather than a report. A null [limit] loads all of them and
+  /// is only ever reached by an explicit "see all" — the default is bounded, so
+  /// the unbounded query is something the driver asks for rather than something
+  /// they get by opening a screen.
+  ///
+  /// Ordered by id descending, like every other list here: UUIDv7 sorts by
+  /// creation and cannot tie, which `created_at` can.
+  Future<List<OrderSummaryRow>> historyForCustomer({
+    required String ownerId,
+    required String customerId,
+    int? limit,
+  }) {
+    return _summaries(
+      where: 'o.owner_id = ?1 AND o.customer_id = ?2',
+      variables: <Variable<Object>>[
+        Variable<String>(ownerId),
+        Variable<String>(customerId),
+      ],
+      limit: limit,
+    );
+  }
+
+  /// How many live parcels a customer has, ever.
+  ///
+  /// Counted rather than derived from the length of a windowed fetch — that is
+  /// the point of the window. It is what lets the screen say it is showing part
+  /// of the history instead of presenting a truncated list as the whole of it.
+  Future<int> historyCountForCustomer({
+    required String ownerId,
+    required String customerId,
   }) async {
+    final QueryRow row = await _db
+        .customSelect(
+          'SELECT count(*) AS c FROM orders o '
+          'WHERE o.owner_id = ?1 AND o.customer_id = ?2 '
+          'AND o.deleted_at IS NULL',
+          variables: <Variable<Object>>[
+            Variable<String>(ownerId),
+            Variable<String>(customerId),
+          ],
+          readsFrom: <ResultSetImplementation<HasResultSet, Object>>{
+            _db.orders,
+          },
+        )
+        .getSingle();
+
+    return row.read<int>('c');
+  }
+
+  /// The join every summary list is built from.
+  ///
+  /// Shared rather than repeated: two lists differing only by a `WHERE` had two
+  /// copies of a five-table join, and a fix applied to one of them would have
+  /// been a bug in the other with nothing to notice. Callers supply the filter
+  /// and its variables; the shape of a row is decided once, here.
+  ///
+  /// [where] is a fixed fragment written at one of this class's own private
+  /// call sites, never anything a driver typed — every *value* travels as a
+  /// bound variable, including [limit]. Interpolating a limit as a literal
+  /// would be an inlined value in SQL, which this codebase does not do even
+  /// where the value is provably a safe integer.
+  ///
+  /// Left joins on customer, address and commune, because a parcel can
+  /// legitimately have none of the three. Inner joins on batch and company,
+  /// because it cannot lack either.
+  Future<List<OrderSummaryRow>> _summaries({
+    required String where,
+    required List<Variable<Object>> variables,
+    int? limit,
+  }) async {
+    // The placeholder's ordinal, not its value: it follows whatever the
+    // caller's filter already bound.
+    final String limitClause = limit == null
+        ? ''
+        : ' LIMIT ?${variables.length + 1}';
+    final List<Variable<Object>> bound = <Variable<Object>>[
+      ...variables,
+      if (limit != null) Variable<int>(limit),
+    ];
+
     final List<QueryRow> rows = await _db
         .customSelect(
           'SELECT o.id, o.tracking_number, o.status, o.delivery_type, '
           'o.cod_amount, cmp.name AS company_name, '
+          'b.service_date AS service_date, '
           'cus.display_name AS customer_name, '
           'com.name_fr AS commune_fr, com.name_ar AS commune_ar, '
           'addr.detail AS address_detail '
@@ -123,13 +217,9 @@ final class OrderDao {
           'LEFT JOIN customers cus ON cus.id = o.customer_id '
           'LEFT JOIN customer_addresses addr ON addr.id = o.address_id '
           'LEFT JOIN communes com ON com.id = addr.commune_id '
-          'WHERE o.owner_id = ?1 AND b.service_date = ?2 '
-          'AND o.deleted_at IS NULL '
-          'ORDER BY o.id DESC',
-          variables: <Variable<Object>>[
-            Variable<String>(ownerId),
-            Variable<String>(serviceDate),
-          ],
+          'WHERE $where AND o.deleted_at IS NULL '
+          'ORDER BY o.id DESC$limitClause',
+          variables: bound,
           readsFrom: <ResultSetImplementation<HasResultSet, Object>>{
             _db.orders,
             _db.batches,
@@ -157,6 +247,7 @@ final class OrderDao {
             ),
             codAmount: Centimes(r.read<int>('cod_amount')),
             companyName: r.read<String>('company_name'),
+            serviceDate: r.read<String>('service_date'),
             customerName: r.read<String?>('customer_name'),
             communeNameFr: r.read<String?>('commune_fr'),
             communeNameAr: r.read<String?>('commune_ar'),
@@ -297,6 +388,7 @@ typedef OrderSummaryRow = ({
   DeliveryType deliveryType,
   Centimes codAmount,
   String companyName,
+  String serviceDate,
   String? customerName,
   String? communeNameFr,
   String? communeNameAr,
