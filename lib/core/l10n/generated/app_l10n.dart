@@ -720,6 +720,36 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Nouvelle société'**
   String get companiesNew;
+
+  /// The currency abbreviation appended after a formatted amount, via MoneyFormat.withCurrency. Read as the same word in both scripts — passed in rather than decided by MoneyFormat itself, which is locale-independent by design (see money_format.dart).
+  ///
+  /// In fr, this message translates to:
+  /// **'DA'**
+  String get moneyCurrency;
+
+  /// Empty state on the orders list before anything has been scanned or entered today.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun colis aujourd\'hui'**
+  String get ordersEmptyTitle;
+
+  /// Points at the scan FAB, which is the only way into the list.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scannez un colis pour commencer.'**
+  String get ordersEmptyBody;
+
+  /// Badge on a list row for a parcel entered with no phone number, in the same neutral register as customerNeedsPhoneReview — this is an ordinary state a manifest produces, not a mistake.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client à ajouter'**
+  String get orderListNeedsCustomer;
+
+  /// Badge on a list row for a parcel with a customer but no commune. A driver doing end-of-morning cleanup uses this to find what still needs an address before a route can be built.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse à ajouter'**
+  String get orderListNeedsAddress;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -342,4 +342,19 @@ class AppL10nAr extends AppL10n {
 
   @override
   String get companiesNew => 'شركة جديدة';
+
+  @override
+  String get moneyCurrency => 'دج';
+
+  @override
+  String get ordersEmptyTitle => 'لا توجد طرود اليوم';
+
+  @override
+  String get ordersEmptyBody => 'امسح طردًا للبدء.';
+
+  @override
+  String get orderListNeedsCustomer => 'زبون يُضاف';
+
+  @override
+  String get orderListNeedsAddress => 'عنوان يُضاف';
 }

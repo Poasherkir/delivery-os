@@ -427,5 +427,25 @@
   "companiesNew": "Nouvelle société",
   "@companiesNew": {
     "description": "Opens the company form from the companies screen."
+  },
+  "moneyCurrency": "DA",
+  "@moneyCurrency": {
+    "description": "The currency abbreviation appended after a formatted amount, via MoneyFormat.withCurrency. Read as the same word in both scripts — passed in rather than decided by MoneyFormat itself, which is locale-independent by design (see money_format.dart)."
+  },
+  "ordersEmptyTitle": "Aucun colis aujourd'hui",
+  "@ordersEmptyTitle": {
+    "description": "Empty state on the orders list before anything has been scanned or entered today."
+  },
+  "ordersEmptyBody": "Scannez un colis pour commencer.",
+  "@ordersEmptyBody": {
+    "description": "Points at the scan FAB, which is the only way into the list."
+  },
+  "orderListNeedsCustomer": "Client à ajouter",
+  "@orderListNeedsCustomer": {
+    "description": "Badge on a list row for a parcel entered with no phone number, in the same neutral register as customerNeedsPhoneReview — this is an ordinary state a manifest produces, not a mistake."
+  },
+  "orderListNeedsAddress": "Adresse à ajouter",
+  "@orderListNeedsAddress": {
+    "description": "Badge on a list row for a parcel with a customer but no commune. A driver doing end-of-morning cleanup uses this to find what still needs an address before a route can be built."
   }
 }

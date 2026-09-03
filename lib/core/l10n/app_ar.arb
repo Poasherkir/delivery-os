@@ -106,5 +106,10 @@
   "companyNameRequired": "الاسم إجباري.",
   "companiesEmptyTitle": "لا توجد شركات",
   "companiesEmptyBody": "أضف الشركات التي توصّل طرودها.",
-  "companiesNew": "شركة جديدة"
+  "companiesNew": "شركة جديدة",
+  "moneyCurrency": "دج",
+  "ordersEmptyTitle": "لا توجد طرود اليوم",
+  "ordersEmptyBody": "امسح طردًا للبدء.",
+  "orderListNeedsCustomer": "زبون يُضاف",
+  "orderListNeedsAddress": "عنوان يُضاف"
 }

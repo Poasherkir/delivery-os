@@ -344,4 +344,19 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get companiesNew => 'Nouvelle société';
+
+  @override
+  String get moneyCurrency => 'DA';
+
+  @override
+  String get ordersEmptyTitle => 'Aucun colis aujourd\'hui';
+
+  @override
+  String get ordersEmptyBody => 'Scannez un colis pour commencer.';
+
+  @override
+  String get orderListNeedsCustomer => 'Client à ajouter';
+
+  @override
+  String get orderListNeedsAddress => 'Adresse à ajouter';
 }

@@ -18,6 +18,7 @@ import '../../companies/presentation/company_form_screen.dart';
 import '../../customers/controllers/customer_lookup_controller.dart';
 import '../../ingestion/presentation/scanner_screen.dart';
 import '../controllers/order_entry_controller.dart';
+import '../controllers/order_list_controller.dart';
 import '../controllers/selected_company_controller.dart';
 import 'commune_picker_sheet.dart';
 
@@ -167,6 +168,10 @@ class _OrderEntryScreenState extends ConsumerState<OrderEntryScreen> {
         // Nothing was written and nothing pretends otherwise.
         return;
       case OrderEntrySaved():
+        // The list has no other way to learn a parcel landed: it does not
+        // poll, and this screen is pushed above it rather than watching the
+        // same repository call.
+        ref.invalidate(orderListProvider);
         _afterSave(thenScan: thenScan);
     }
   }
