@@ -1700,6 +1700,26 @@ field a phone number".
 
 ### Week 5–6 (M3)
 
+**M3 owes an answer for orders that have no rule version.**
+
+Inherited from M1-08. Every order entered before its company had a payment rule
+carries `payment_rule_version = NULL` and zeroes in the six computed money
+columns — deliberately, because a version written for a rule that does not exist
+would invent the business data the settlement is reproduced from. That is
+correct at entry and undecided at settlement.
+
+The engine must not meet that null without a policy. Three shapes are plausible
+and none is chosen here: refuse to settle a batch containing one and make the
+driver attach a rule first; evaluate it under the company's *earliest* rule and
+record that substitution in the snapshot; or settle it at zero commission and
+surface it as an adjustment. Each is a different answer to "what is the driver
+owed", so it is a decision to be made deliberately in M3 rather than a default
+that falls out of whichever branch was written first.
+
+Whatever is chosen, the snapshot has to say which orders it applied to — a
+settlement that cannot be told apart from one computed under a real rule is not
+reproducible.
+
 25. Payment rule spec model and JSON serialization.
 26. `RuleEngine.evaluate()`, pure, integer-only.
 27. Rule editor UI for the two real formulas you collected in step 3.

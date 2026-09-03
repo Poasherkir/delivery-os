@@ -62,8 +62,20 @@ Violating any of these is a bug, even if the code compiles and tests pass.
 7. **Settlements are immutable.** Once `daily_settlements` has a row for a batch,
    corrections insert into `settlement_adjustments`. Never `UPDATE`, never
    `DELETE`.
-8. **`payment_rule_version` is pinned on the order at creation.** Editing a
-   company rule creates version N+1 and never touches historical orders.
+8. **An order pins the payment rule version in force at its creation.**
+   Editing a company rule creates version N+1 and never touches historical
+   orders.
+
+   **Before any payment rule exists, the column is null and the six computed
+   money columns are zero.** That is the honest record of "entered before rules
+   existed", not a gap — writing a version number for a rule that does not
+   exist would invent the exact business data a settlement is later reproduced
+   from. `orders.payment_rule_version` is nullable for this reason.
+
+   What that null means at settlement time is **M3's to decide**, and
+   `docs/ARCHITECTURE.md` §M3 records that it owes an answer. A null reaching a
+   settlement engine without a policy is the silent-default failure this file
+   exists to prevent.
 9. **Coordinates carry a confidence tier** (0 none → 4 GPS-confirmed at
    delivery). Never route a confidence-0 stop. Never silently downgrade a pin.
 10. **AR and FR from the first screen**, with correct RTL mirroring. No
@@ -399,7 +411,7 @@ the correct answer for them.
 | 5 Transaction + outbox row | `test/architecture/outbox_guard_test.dart` — scans `daos/` for writers, then invokes each and asserts the queue grew by one. A writer with no registry entry fails by name |
 | 6 `OrderStateMachine` | `test/domain/state/order_state_machine_test.dart` — every state pair, terminal states proven closed, and a table that fails closed when a status is added |
 | 7 Settlements immutable | `test/data/db/schema_v1_ledger_test.dart` — structural, the columns do not exist |
-| 8 `payment_rule_version` pinned | `test/data/db/schema_v1_orders_test.dart` for the column. **Pinning logic: soft** until M3 |
+| 8 `payment_rule_version` pinned | `test/data/db/schema_v1_orders_test.dart` for the column; `test/data/db/daos/order_dao_test.dart` pins the null and the six zeroes. **Pinning logic: soft** until M3 |
 | 9 Confidence tiers | `test/domain/value_objects/geo_confidence_test.dart`. "Never route a 0" has no router yet |
 | 10 AR/FR, no hardcoded strings | `test/architecture/no_raw_text_test.dart`, `test/core/l10n/arb_parity_test.dart`, `test/widget/rtl_mirroring_test.dart` |
 | 11 No background location | `test/architecture/android_permissions_test.dart` — permission allowlist (empty today), a separate forbidden list, and no foreground-service type or receiver |
