@@ -8,10 +8,11 @@ import 'package:delivery_os/data/db/daos/address_dao.dart';
 import 'package:delivery_os/data/db/daos/batch_dao.dart';
 import 'package:delivery_os/data/db/daos/company_dao.dart';
 import 'package:delivery_os/data/db/daos/customer_dao.dart';
+import 'package:delivery_os/data/db/daos/order_dao.dart';
 import 'package:delivery_os/data/db/daos/user_settings_dao.dart';
 import 'package:delivery_os/domain/value_objects/customer_risk_flag.dart';
 import 'package:delivery_os/domain/value_objects/phone_e164.dart';
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, Batch;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -68,6 +69,9 @@ final class _Fixture {
   /// Same, for the mutations that need an existing company.
   Company? pendingCompany;
 
+  /// Same, for the mutations that need an existing order.
+  Order? pendingOrder;
+
   CustomerDao get customers => CustomerDao(
     database: db,
     clock: clock,
@@ -106,6 +110,29 @@ final class _Fixture {
 
   Future<Company> aCompany([String name = 'Yalidine']) =>
       companies.create(ownerId: userId, name: name);
+
+  OrderDao get orders => OrderDao(
+    database: db,
+    clock: clock,
+    uuid: uuid,
+    deviceId: 'guard-device',
+  );
+
+  /// An order needs a batch, which needs a company. Foreign keys are on.
+  Future<Order> anOrder([String tracking = 'YAL-0001']) async {
+    final Company company = await aCompany('Yalidine');
+    final Batch batch = await batches.ensureOpenBatch(
+      ownerId: userId,
+      companyId: company.id,
+      serviceDate: '2026-09-01',
+    );
+    return orders.create(
+      ownerId: userId,
+      batchId: batch.id,
+      companyId: company.id,
+      trackingNumber: tracking,
+    );
+  }
 
   UserSettingsDao get settings => UserSettingsDao(
     database: db,
@@ -206,6 +233,43 @@ final List<_Mutation> _mutations = <_Mutation>[
       companyId: f.pendingCompany!.id,
       serviceDate: '2026-09-01',
     ),
+  ),
+  (
+    dao: 'OrderDao',
+    method: 'create',
+    // The company and the batch are made in prepare because each queues a row
+    // of its own. Only the order's own command may be counted.
+    prepare: (_Fixture f) async {
+      f.pendingCompany = await f.aCompany('Yalidine');
+      await f.batches.ensureOpenBatch(
+        ownerId: f.userId,
+        companyId: f.pendingCompany!.id,
+        serviceDate: '2026-09-01',
+      );
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) async {
+      final Batch batch = await f.batches.ensureOpenBatch(
+        ownerId: f.userId,
+        companyId: f.pendingCompany!.id,
+        serviceDate: '2026-09-01',
+      );
+      await f.orders.create(
+        ownerId: f.userId,
+        batchId: batch.id,
+        companyId: f.pendingCompany!.id,
+        trackingNumber: 'YAL-0001',
+      );
+    },
+  ),
+  (
+    dao: 'OrderDao',
+    method: 'softDelete',
+    prepare: (_Fixture f) async {
+      f.pendingOrder = await f.anOrder('YAL-0002');
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) => f.orders.softDelete(f.pendingOrder!),
   ),
   (
     dao: 'UserSettingsDao',
