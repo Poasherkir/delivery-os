@@ -5,6 +5,7 @@ import 'package:delivery_os/core/utils/uuid_v7.dart';
 import 'package:delivery_os/data/db/app_database.dart';
 import 'package:delivery_os/data/db/bootstrap.dart';
 import 'package:delivery_os/data/db/daos/address_dao.dart';
+import 'package:delivery_os/data/db/daos/batch_dao.dart';
 import 'package:delivery_os/data/db/daos/company_dao.dart';
 import 'package:delivery_os/data/db/daos/customer_dao.dart';
 import 'package:delivery_os/data/db/daos/user_settings_dao.dart';
@@ -90,6 +91,13 @@ final class _Fixture {
   );
 
   CompanyDao get companies => CompanyDao(
+    database: db,
+    clock: clock,
+    uuid: uuid,
+    deviceId: 'guard-device',
+  );
+
+  BatchDao get batches => BatchDao(
     database: db,
     clock: clock,
     uuid: uuid,
@@ -183,6 +191,21 @@ final List<_Mutation> _mutations = <_Mutation>[
     },
     invoke: (_Fixture f, Customer? _) =>
         f.companies.softDelete(f.pendingCompany!),
+  ),
+  (
+    dao: 'BatchDao',
+    method: 'ensureOpenBatch',
+    // The company is made in prepare because creating it queues a row of its
+    // own. Only the batch's own command may be counted.
+    prepare: (_Fixture f) async {
+      f.pendingCompany = await f.aCompany('Yalidine');
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) => f.batches.ensureOpenBatch(
+      ownerId: f.userId,
+      companyId: f.pendingCompany!.id,
+      serviceDate: '2026-09-01',
+    ),
   ),
   (
     dao: 'UserSettingsDao',
