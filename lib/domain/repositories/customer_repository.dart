@@ -23,8 +23,9 @@ final class DuplicatePhoneException implements Exception {
 /// Note what is absent. There is no `restore`: a soft-deleted customer stays
 /// deleted, because restoring into a collision with the partial unique index
 /// has no good answer, and the operation would exist only because it was
-/// invented. The product need is merge, which is a separate feature with its
-/// own decisions about orders and learned pins.
+/// invented. The product need is merge, and it is [CustomerMergeService] — a
+/// separate interface, because it is a separate decision with its own rules
+/// about orders and learned pins rather than one more method bolted on here.
 abstract interface class CustomerRepository {
   /// Every live customer, oldest first.
   Future<List<Customer>> all();

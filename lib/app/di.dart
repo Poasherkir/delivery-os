@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/device/device_id_store.dart';
 import '../core/time/clock.dart';
 import '../core/utils/uuid_v7.dart';
+import '../data/db/customer_merge.dart';
 import '../data/db/daos/address_dao.dart';
 import '../data/db/daos/batch_dao.dart';
 import '../data/db/daos/company_dao.dart';
@@ -25,12 +26,14 @@ import '../data/geo/geo_loader.dart';
 import '../data/repositories/drift_address_repository.dart';
 import '../data/repositories/drift_batch_repository.dart';
 import '../data/repositories/drift_company_repository.dart';
+import '../data/repositories/drift_customer_merge_service.dart';
 import '../data/repositories/drift_customer_repository.dart';
 import '../data/repositories/drift_geography_repository.dart';
 import '../data/repositories/drift_order_repository.dart';
 import '../domain/repositories/address_repository.dart';
 import '../domain/repositories/batch_repository.dart';
 import '../domain/repositories/company_repository.dart';
+import '../domain/repositories/customer_merge_service.dart';
 import '../domain/repositories/customer_repository.dart';
 import '../domain/repositories/geography_repository.dart';
 import '../domain/repositories/order_repository.dart';
@@ -287,6 +290,24 @@ final Provider<OrderRepository?> orderRepositoryProvider =
         ),
         clock: ref.watch(clockProvider),
         ownerId: started.user.id,
+      );
+    });
+
+/// Merging one customer into another — **null until the database is open**.
+final Provider<CustomerMergeService?> customerMergeServiceProvider =
+    Provider<CustomerMergeService?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      if (started == null) {
+        return null;
+      }
+
+      return DriftCustomerMergeService(
+        merge: CustomerMerge(
+          started.database,
+          ref.watch(clockProvider),
+          ref.watch(uuidProvider),
+          started.deviceId,
+        ),
       );
     });
 
