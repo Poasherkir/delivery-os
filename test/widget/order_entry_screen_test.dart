@@ -20,11 +20,15 @@ import 'package:delivery_os/data/repositories/drift_customer_repository.dart';
 import 'package:delivery_os/data/repositories/drift_geography_repository.dart';
 import 'package:delivery_os/data/repositories/drift_order_repository.dart';
 import 'package:delivery_os/domain/entities/company.dart';
+import 'package:delivery_os/domain/entities/customer.dart';
 import 'package:delivery_os/domain/entities/order.dart';
+import 'package:delivery_os/domain/repositories/batch_repository.dart';
 import 'package:delivery_os/domain/repositories/company_repository.dart';
+import 'package:delivery_os/domain/repositories/customer_repository.dart';
 import 'package:delivery_os/domain/repositories/order_repository.dart';
 import 'package:delivery_os/domain/value_objects/centimes.dart';
 import 'package:delivery_os/domain/value_objects/delivery_type.dart';
+import 'package:delivery_os/domain/value_objects/phone_e164.dart';
 import 'package:delivery_os/features/orders/presentation/order_entry_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +50,8 @@ void main() {
   late db.AppDatabase database;
   late CompanyRepository companies;
   late OrderRepository orders;
+  late CustomerRepository customers;
+  late BatchRepository batches;
   // Riverpod 3 does not export the `Override` type, so this is inferred.
   late List<Object> overrides;
 
@@ -84,20 +90,30 @@ void main() {
       ownerId: user.id,
     );
 
+    customers = DriftCustomerRepository(
+      dao: CustomerDao(
+        database: database,
+        clock: clock,
+        uuid: uuid,
+        deviceId: 'device-under-test',
+      ),
+      ownerId: user.id,
+    );
+    batches = DriftBatchRepository(
+      dao: BatchDao(
+        database: database,
+        clock: clock,
+        uuid: uuid,
+        deviceId: 'device-under-test',
+      ),
+      clock: clock,
+      ownerId: user.id,
+    );
+
     overrides = <Object>[
       companyRepositoryProvider.overrideWithValue(companies),
       orderRepositoryProvider.overrideWithValue(orders),
-      customerRepositoryProvider.overrideWithValue(
-        DriftCustomerRepository(
-          dao: CustomerDao(
-            database: database,
-            clock: clock,
-            uuid: uuid,
-            deviceId: 'device-under-test',
-          ),
-          ownerId: user.id,
-        ),
-      ),
+      customerRepositoryProvider.overrideWithValue(customers),
       addressRepositoryProvider.overrideWithValue(
         DriftAddressRepository(
           dao: AddressDao(
@@ -109,18 +125,7 @@ void main() {
           ownerId: user.id,
         ),
       ),
-      batchRepositoryProvider.overrideWithValue(
-        DriftBatchRepository(
-          dao: BatchDao(
-            database: database,
-            clock: clock,
-            uuid: uuid,
-            deviceId: 'device-under-test',
-          ),
-          clock: clock,
-          ownerId: user.id,
-        ),
-      ),
+      batchRepositoryProvider.overrideWithValue(batches),
       geographyRepositoryProvider.overrideWithValue(
         DriftGeographyRepository(database),
       ),
@@ -396,6 +401,81 @@ void main() {
           reason: '"$forbidden" reads as the driver\'s fault',
         );
       }
+    });
+  });
+
+  group('a number that already belongs to somebody', () {
+    setUp(() async {
+      await companies.create(name: 'Yalidine');
+      // Somebody with a history, so the count on the card has something to
+      // say. A record with no parcels would render "Aucune commande", which
+      // is true but does not exercise the recognition aid.
+      final Customer amine = await customers.create(
+        phone: PhoneE164.parse('0550123456'),
+        displayName: 'Amine Bensalem',
+      );
+      final String batchId = (await batches.ensureOpenBatch(
+        companyId: (await companies.selectable()).single.id,
+      )).id;
+      for (int i = 0; i < 3; i++) {
+        await orders.create(
+          batchId: batchId,
+          companyId: (await companies.selectable()).single.id,
+          trackingNumber: 'YAL-OLD-$i',
+          customerId: amine.id,
+        );
+      }
+      await database.customStatement(
+        'UPDATE customers SET total_orders = 3 WHERE id = ?',
+        <Object?>[amine.id],
+      );
+    });
+
+    testWidgets('names them, so the driver can see it is the right person', (
+      WidgetTester tester,
+    ) async {
+      // The gap this closes: the name field vanishing was the only signal a
+      // match had happened, which says something was found but not who.
+      await pump(tester, locale: AppLocales.french, scanned: 'YAL-0001');
+
+      await tester.enterText(
+        find.byKey(const Key('orderEntry.phone')),
+        '0550123456',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('orderEntry.existing')), findsOneWidget);
+      expect(find.text('Amine Bensalem'), findsOneWidget);
+    });
+
+    testWidgets('and shows how many parcels they have had', (
+      WidgetTester tester,
+    ) async {
+      // Two Amines are common; one with three parcels is not.
+      await pump(tester, locale: AppLocales.french, scanned: 'YAL-0001');
+
+      await tester.enterText(
+        find.byKey(const Key('orderEntry.phone')),
+        '0550123456',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 commandes'), findsOneWidget);
+    });
+
+    testWidgets('and stops asking for a name', (WidgetTester tester) async {
+      await pump(tester, locale: AppLocales.french, scanned: 'YAL-0001');
+
+      await tester.enterText(
+        find.byKey(const Key('orderEntry.phone')),
+        '0550123456',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('orderEntry.name')), findsNothing);
     });
   });
 

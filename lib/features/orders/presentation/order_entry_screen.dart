@@ -9,6 +9,7 @@ import '../../../core/l10n/generated/app_l10n.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/tokens/tokens.dart';
 import '../../../domain/entities/company.dart';
+import '../../../domain/entities/customer.dart';
 import '../../../domain/entities/order.dart';
 import '../../../domain/entities/place.dart';
 import '../../../domain/value_objects/centimes.dart';
@@ -315,12 +316,14 @@ class _OrderEntryScreenState extends ConsumerState<OrderEntryScreen> {
                       ),
                     ],
 
-                    LookupExisting() => <Widget>[
+                    // Named, and with the count, because the driver has to be
+                    // able to tell this is the right person. Two Amines are
+                    // common; one with forty parcels is not. Without it the
+                    // only signal that a match happened is the name field
+                    // vanishing, which says something was found but not who.
+                    LookupExisting(:final Customer customer) => <Widget>[
                       const SizedBox(height: SpaceTokens.space8),
-                      _Notice(
-                        key: const Key('orderEntry.existing'),
-                        text: l10n.customerLookupExisting,
-                      ),
+                      _ExistingCustomer(customer: customer),
                     ],
                   },
 
@@ -637,6 +640,52 @@ class _NoCompany extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The customer this number already belongs to.
+///
+/// Nothing to tap. On the customer form this card offers "use this customer",
+/// because there the driver is deciding whether to create a second record.
+/// Here the reuse has already happened — the entry controller resolves an
+/// existing number to its customer before writing anything — so a button would
+/// ask for a tap that changes nothing. What is left is recognition, which is
+/// what the name and the count are for.
+class _ExistingCustomer extends StatelessWidget {
+  const _ExistingCustomer({required this.customer});
+
+  final Customer customer;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppL10n l10n = AppL10n.of(context);
+    final ColorTokens colors = context.colors;
+
+    return Container(
+      key: const Key('orderEntry.existing'),
+      padding: const EdgeInsets.all(SpaceTokens.space12),
+      decoration: BoxDecoration(
+        color: colors.statusNeutralBg,
+        borderRadius: BorderRadius.circular(RadiusTokens.small),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppText(
+            l10n.customerLookupExisting,
+            AppTextStyle.caption,
+            color: colors.statusNeutralFg,
+          ),
+          const SizedBox(height: SpaceTokens.space4),
+          AppText(customer.displayName, AppTextStyle.body),
+          AppText(
+            l10n.customerLookupOrders(customer.totalOrders),
+            AppTextStyle.caption,
+            color: colors.textSecondary,
+          ),
+        ],
       ),
     );
   }
