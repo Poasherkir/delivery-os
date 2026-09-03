@@ -397,7 +397,7 @@ the correct answer for them.
 | 3 Five-category audit columns | `test/data/db/table_categories_test.dart` — all twenty, plus a check that a new table fails until it is categorised |
 | 4 `domain/` imports nothing | `test/architecture/domain_purity_test.dart` — allowlist, fails closed |
 | 5 Transaction + outbox row | `test/architecture/outbox_guard_test.dart` — scans `daos/` for writers, then invokes each and asserts the queue grew by one. A writer with no registry entry fails by name |
-| 6 `OrderStateMachine` | Not built (M2) |
+| 6 `OrderStateMachine` | `test/domain/state/order_state_machine_test.dart` — every state pair, terminal states proven closed, and a table that fails closed when a status is added |
 | 7 Settlements immutable | `test/data/db/schema_v1_ledger_test.dart` — structural, the columns do not exist |
 | 8 `payment_rule_version` pinned | `test/data/db/schema_v1_orders_test.dart` for the column. **Pinning logic: soft** until M3 |
 | 9 Confidence tiers | `test/domain/value_objects/geo_confidence_test.dart`. "Never route a 0" has no router yet |
