@@ -80,6 +80,7 @@ void main() {
         uuid: uuid,
         deviceId: 'device-under-test',
       ),
+      clock: clock,
       ownerId: user.id,
     );
 

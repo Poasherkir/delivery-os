@@ -92,6 +92,80 @@ final class OrderDao {
         .get();
   }
 
+  /// Every live parcel filed under a service date, newest first.
+  ///
+  /// One query, five tables. The list shows a customer's name and a commune's
+  /// name, and fetching those per row would be several queries a parcel on the
+  /// screen a driver opens most — a batch of fifteen would be sixty round trips
+  /// for one scroll.
+  ///
+  /// Left joins on customer, address and commune, because all three are
+  /// legitimately absent: a parcel can be entered before anyone is attached to
+  /// it. Inner joins on batch and company, because neither can be.
+  ///
+  /// Ordered by order id descending. UUIDv7 sorts by creation and cannot tie,
+  /// which `created_at` can when fifteen parcels are entered inside one
+  /// millisecond.
+  Future<List<OrderSummaryRow>> summariesForDate({
+    required String ownerId,
+    required String serviceDate,
+  }) async {
+    final List<QueryRow> rows = await _db
+        .customSelect(
+          'SELECT o.id, o.tracking_number, o.status, o.delivery_type, '
+          'o.cod_amount, cmp.name AS company_name, '
+          'cus.display_name AS customer_name, '
+          'com.name_fr AS commune_fr, com.name_ar AS commune_ar, '
+          'addr.detail AS address_detail '
+          'FROM orders o '
+          'JOIN batches b ON b.id = o.batch_id '
+          'JOIN companies cmp ON cmp.id = o.company_id '
+          'LEFT JOIN customers cus ON cus.id = o.customer_id '
+          'LEFT JOIN customer_addresses addr ON addr.id = o.address_id '
+          'LEFT JOIN communes com ON com.id = addr.commune_id '
+          'WHERE o.owner_id = ?1 AND b.service_date = ?2 '
+          'AND o.deleted_at IS NULL '
+          'ORDER BY o.id DESC',
+          variables: <Variable<Object>>[
+            Variable<String>(ownerId),
+            Variable<String>(serviceDate),
+          ],
+          readsFrom: <ResultSetImplementation<HasResultSet, Object>>{
+            _db.orders,
+            _db.batches,
+            _db.companies,
+            _db.customers,
+            _db.customerAddresses,
+            _db.communes,
+          },
+        )
+        .get();
+
+    return rows
+        .map(
+          (QueryRow r) => (
+            id: r.read<String>('id'),
+            trackingNumber: r.read<String>('tracking_number'),
+            // Read back through the same converters the columns are written
+            // with. A raw string here would be a second place that knows how a
+            // status is spelled, and it would not fail when they disagreed.
+            status: _db.orders.status.converter.fromSql(
+              r.read<String>('status'),
+            ),
+            deliveryType: _db.orders.deliveryType.converter.fromSql(
+              r.read<String>('delivery_type'),
+            ),
+            codAmount: Centimes(r.read<int>('cod_amount')),
+            companyName: r.read<String>('company_name'),
+            customerName: r.read<String?>('customer_name'),
+            communeNameFr: r.read<String?>('commune_fr'),
+            communeNameAr: r.read<String?>('commune_ar'),
+            addressDetail: r.read<String?>('address_detail'),
+          ),
+        )
+        .toList();
+  }
+
   /// Adds an order.
   ///
   /// [customerId] and [addressId] are nullable because a manifest can name a
@@ -211,6 +285,23 @@ final class OrderDao {
     });
   }
 }
+
+/// One joined row, before it crosses into `domain/`.
+///
+/// A record rather than a class: it exists for the length of one mapping and
+/// naming it as a type would suggest it is a thing the app has.
+typedef OrderSummaryRow = ({
+  String id,
+  String trackingNumber,
+  OrderStatus status,
+  DeliveryType deliveryType,
+  Centimes codAmount,
+  String companyName,
+  String? customerName,
+  String? communeNameFr,
+  String? communeNameAr,
+  String? addressDetail,
+});
 
 /// The audit columns as an [EntityStamp], so a DAO never assembles one by hand.
 extension OrderStamp on Order {

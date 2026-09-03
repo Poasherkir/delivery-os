@@ -7,6 +7,7 @@ import 'package:delivery_os/data/db/daos/company_dao.dart';
 import 'package:delivery_os/data/db/daos/order_dao.dart';
 import 'package:delivery_os/data/repositories/drift_order_repository.dart';
 import 'package:delivery_os/domain/entities/order.dart';
+import 'package:delivery_os/domain/entities/order_summary.dart';
 import 'package:delivery_os/domain/repositories/order_repository.dart';
 import 'package:delivery_os/domain/state/order_status.dart';
 import 'package:delivery_os/domain/value_objects/centimes.dart';
@@ -15,6 +16,7 @@ import 'package:test/test.dart';
 
 void main() {
   late db.AppDatabase database;
+  late FixedClock clock;
   late OrderRepository repo;
   late String companyId;
   late String batchId;
@@ -22,7 +24,7 @@ void main() {
   setUp(() async {
     database = db.AppDatabase(NativeDatabase.memory());
     await database.customStatement('PRAGMA foreign_keys = ON');
-    final FixedClock clock = FixedClock(DateTime.utc(2026, 9, 3, 7));
+    clock = FixedClock(DateTime.utc(2026, 9, 3, 7));
     final UuidV7Generator uuid = UuidV7Generator(clock: clock);
     final db.User user = await AppBootstrap(database, clock, uuid).ensureUser();
 
@@ -53,6 +55,7 @@ void main() {
         uuid: uuid,
         deviceId: 'device-under-test',
       ),
+      clock: clock,
       ownerId: user.id,
     );
   });
@@ -177,5 +180,46 @@ void main() {
     ]);
 
     await expectLater(repo.softDelete(o), throwsA(isA<StateError>()));
+  });
+  group('summariesForDate', () {
+    test('defaults to the current service day', () async {
+      await add(tracking: 'YAL-0001');
+
+      final List<OrderSummary> today = await repo.summariesForDate();
+
+      expect(today, hasLength(1));
+      expect(today.single.trackingNumber, 'YAL-0001');
+    });
+
+    test('and after midnight is still the day that just ended', () async {
+      // 23:30 UTC on the 3rd is 00:30 in Algiers on the 4th. A parcel entered
+      // then belongs to the batch already open for the 3rd, and the list
+      // default has to agree with `ensureOpenBatch` about which day that is.
+      clock.instant = DateTime.utc(2026, 9, 3, 23, 30);
+      await add(tracking: 'YAL-0002');
+
+      final List<OrderSummary> rows = await repo.summariesForDate();
+
+      expect(rows, hasLength(1));
+      expect(rows.single.trackingNumber, 'YAL-0002');
+      expect(await repo.summariesForDate(serviceDate: '2026-09-04'), isEmpty);
+    });
+
+    test('an explicit date overrides the default', () async {
+      await add(tracking: 'YAL-0003');
+
+      expect(await repo.summariesForDate(serviceDate: '2026-09-04'), isEmpty);
+    });
+
+    test('comes back as domain summaries, not Drift rows', () async {
+      await add(tracking: 'YAL-0004', cod: Centimes.fromDinars(4500));
+
+      final OrderSummary row = (await repo.summariesForDate()).single;
+
+      expect(row, isA<OrderSummary>());
+      expect(row.codAmount, const Centimes(450000));
+      expect(row.companyName, 'Yalidine');
+      expect(row.needsCustomer, isTrue);
+    });
   });
 }

@@ -1,4 +1,5 @@
 import '../entities/order.dart';
+import '../entities/order_summary.dart';
 import '../value_objects/centimes.dart';
 import '../value_objects/delivery_type.dart';
 
@@ -32,6 +33,13 @@ final class DuplicateTrackingException implements Exception {
 abstract interface class OrderRepository {
   /// A batch's live orders, newest first.
   Future<List<Order>> forBatch(String batchId);
+
+  /// Today's parcels, newest first, across every company.
+  ///
+  /// [serviceDate] defaults to the current service day. A driver working two
+  /// companies in one morning has two batches and one list — the batch is the
+  /// settlement unit, not a thing to navigate between.
+  Future<List<OrderSummary>> summariesForDate({String? serviceDate});
 
   /// The order carrying this tracking number for this company, or null.
   Future<Order?> findByTracking({

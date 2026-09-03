@@ -1,4 +1,7 @@
+import '../../core/time/clock.dart';
+import '../../core/time/service_day.dart';
 import '../../domain/entities/order.dart';
+import '../../domain/entities/order_summary.dart';
 import '../../domain/repositories/order_repository.dart';
 import '../../domain/value_objects/centimes.dart';
 import '../../domain/value_objects/delivery_type.dart';
@@ -15,17 +18,48 @@ final class DriftOrderRepository implements OrderRepository {
   /// private while the call site stays named.
   factory DriftOrderRepository({
     required OrderDao dao,
+    required Clock clock,
     required String ownerId,
-  }) => DriftOrderRepository._(dao, ownerId);
+  }) => DriftOrderRepository._(dao, clock, ownerId);
 
-  const DriftOrderRepository._(this._dao, this._ownerId);
+  const DriftOrderRepository._(this._dao, this._clock, this._ownerId);
 
   final OrderDao _dao;
+
+  /// Only so today's date can be derived. A DAO should not read a clock to
+  /// decide which rows to return, the same split `DriftBatchRepository` makes.
+  final Clock _clock;
+
   final String _ownerId;
 
   @override
   Future<List<Order>> forBatch(String batchId) async =>
       (await _dao.forBatch(batchId)).map(_toDomain).toList();
+
+  @override
+  Future<List<OrderSummary>> summariesForDate({String? serviceDate}) async {
+    final List<OrderSummaryRow> rows = await _dao.summariesForDate(
+      ownerId: _ownerId,
+      serviceDate: serviceDate ?? ServiceDay.from(_clock.nowUtc()),
+    );
+
+    return rows
+        .map(
+          (OrderSummaryRow r) => OrderSummary(
+            id: r.id,
+            trackingNumber: r.trackingNumber,
+            status: r.status,
+            deliveryType: r.deliveryType,
+            codAmount: r.codAmount,
+            companyName: r.companyName,
+            customerName: r.customerName,
+            communeNameFr: r.communeNameFr,
+            communeNameAr: r.communeNameAr,
+            addressDetail: r.addressDetail,
+          ),
+        )
+        .toList();
+  }
 
   @override
   Future<Order?> findByTracking({

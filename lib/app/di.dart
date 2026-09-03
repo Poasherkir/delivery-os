@@ -285,6 +285,7 @@ final Provider<OrderRepository?> orderRepositoryProvider =
           uuid: ref.watch(uuidProvider),
           deviceId: started.deviceId,
         ),
+        clock: ref.watch(clockProvider),
         ownerId: started.user.id,
       );
     });
