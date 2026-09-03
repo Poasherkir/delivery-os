@@ -8,7 +8,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/device/device_id_store.dart';
 import '../core/time/clock.dart';
 import '../core/utils/uuid_v7.dart';
+import '../data/db/daos/address_dao.dart';
+import '../data/db/daos/batch_dao.dart';
+import '../data/db/daos/company_dao.dart';
 import '../data/db/daos/customer_dao.dart';
+import '../data/db/daos/order_dao.dart';
 import '../data/db/daos/user_settings_dao.dart';
 import '../data/db/database_location.dart';
 import '../data/db/encryption/database_key.dart';
@@ -18,10 +22,18 @@ import '../data/db/encryption/secure_key_store.dart';
 import '../data/geo/bundled_geo_assets.dart';
 import '../data/geo/geo_hydration.dart';
 import '../data/geo/geo_loader.dart';
+import '../data/repositories/drift_address_repository.dart';
+import '../data/repositories/drift_batch_repository.dart';
+import '../data/repositories/drift_company_repository.dart';
 import '../data/repositories/drift_customer_repository.dart';
 import '../data/repositories/drift_geography_repository.dart';
+import '../data/repositories/drift_order_repository.dart';
+import '../domain/repositories/address_repository.dart';
+import '../domain/repositories/batch_repository.dart';
+import '../domain/repositories/company_repository.dart';
 import '../domain/repositories/customer_repository.dart';
 import '../domain/repositories/geography_repository.dart';
+import '../domain/repositories/order_repository.dart';
 import '../domain/repositories/user_settings.dart';
 import 'startup.dart';
 
@@ -186,6 +198,88 @@ final Provider<CustomerRepository?> customerRepositoryProvider =
 
       return DriftCustomerRepository(
         dao: CustomerDao(
+          database: started.database,
+          clock: ref.watch(clockProvider),
+          uuid: ref.watch(uuidProvider),
+          deviceId: started.deviceId,
+        ),
+        ownerId: started.user.id,
+      );
+    });
+
+/// A customer's addresses — **null until the database is open**.
+final Provider<AddressRepository?> addressRepositoryProvider =
+    Provider<AddressRepository?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      if (started == null) {
+        return null;
+      }
+
+      return DriftAddressRepository(
+        dao: AddressDao(
+          database: started.database,
+          clock: ref.watch(clockProvider),
+          uuid: ref.watch(uuidProvider),
+          deviceId: started.deviceId,
+        ),
+        ownerId: started.user.id,
+      );
+    });
+
+/// The delivery companies the driver works for — **null until the database is
+/// open**.
+final Provider<CompanyRepository?> companyRepositoryProvider =
+    Provider<CompanyRepository?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      if (started == null) {
+        return null;
+      }
+
+      return DriftCompanyRepository(
+        dao: CompanyDao(
+          database: started.database,
+          clock: ref.watch(clockProvider),
+          uuid: ref.watch(uuidProvider),
+          deviceId: started.deviceId,
+        ),
+        ownerId: started.user.id,
+      );
+    });
+
+/// The day's batch — **null until the database is open**.
+///
+/// Takes the clock as well as the database: the service date is derived from
+/// it, and a repository that read `DateTime.now()` instead could not be tested
+/// across the 04:00 cutoff.
+final Provider<BatchRepository?> batchRepositoryProvider =
+    Provider<BatchRepository?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      if (started == null) {
+        return null;
+      }
+
+      return DriftBatchRepository(
+        dao: BatchDao(
+          database: started.database,
+          clock: ref.watch(clockProvider),
+          uuid: ref.watch(uuidProvider),
+          deviceId: started.deviceId,
+        ),
+        clock: ref.watch(clockProvider),
+        ownerId: started.user.id,
+      );
+    });
+
+/// Today's parcels — **null until the database is open**.
+final Provider<OrderRepository?> orderRepositoryProvider =
+    Provider<OrderRepository?>((Ref ref) {
+      final StartupResult? started = ref.watch(startupProvider).value;
+      if (started == null) {
+        return null;
+      }
+
+      return DriftOrderRepository(
+        dao: OrderDao(
           database: started.database,
           clock: ref.watch(clockProvider),
           uuid: ref.watch(uuidProvider),
