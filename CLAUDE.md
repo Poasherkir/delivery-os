@@ -466,7 +466,7 @@ the correct answer for them.
 |---|---|
 | No test that passes against an empty implementation | soft — judgement. Three caught by review so far |
 | Money expectations derived independently | soft — judgement |
-| Locale set explicitly in widget tests | soft — **convertible**: scan `testWidgets` bodies for a locale |
+| Locale set explicitly in widget tests | `test/architecture/widget_test_locale_test.dart` — every `MaterialApp` a test builds names a locale. Scans the widget that installs `Localizations`, not the `testWidgets` body, because that is the thing that actually chooses |
 | `lib/domain/` 90%+ coverage | `tool/check_domain_coverage.dart`, run in CI after `flutter test --coverage` |
 | Money engine property tests | soft until M3 |
 
@@ -476,6 +476,6 @@ the correct answer for them.
 |---|---|
 | Five bottom-nav destinations | `test/widget/router_test.dart` |
 | Dark and light both real | `test/core/theme/app_theme_test.dart` |
-| Minimum 48dp tap target | partial — `test/widget/database_error_screen_test.dart` only. Convertible |
+| Minimum 48dp tap target | `test/architecture/tap_target_coverage_test.dart` — scans `features/` for screens, and each is either named against a test that measures or exempt with a reason. The measuring stays in the per-screen tests; this guarantees each has one |
 | Next action is the largest thing | soft — judgement |
 | No gradients, glassmorphism, neon | soft — judgement |

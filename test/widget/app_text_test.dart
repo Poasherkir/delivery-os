@@ -15,6 +15,15 @@ Future<Text> _pumpText(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      // Named, not inherited. `AppText` scales itself by the active locale
+      // through `TypeTokens.scriptMultiplierFor`, so every assertion here
+      // about a rendered size is an assertion about a locale. This resolved
+      // to `en` only because MaterialApp defaults `supportedLocales` to it —
+      // right, but by accident, and silently wrong the day
+      // `arabicSizeMultiplier` stops being 1.0. French is the non-Arabic
+      // path, where the multiplier is 1.0 by definition rather than by
+      // coincidence.
+      locale: AppLocales.french,
       theme: theme ?? AppTheme.light(),
       home: Scaffold(body: child),
     ),

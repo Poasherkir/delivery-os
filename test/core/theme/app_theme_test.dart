@@ -1,3 +1,4 @@
+import 'package:delivery_os/core/l10n/app_locales.dart';
 import 'package:delivery_os/core/theme/app_theme.dart';
 import 'package:delivery_os/core/theme/app_tokens.dart';
 import 'package:delivery_os/core/theme/tokens/tokens.dart';
@@ -159,6 +160,10 @@ void main() {
     Future<void> pump(ThemeData theme) async {
       await tester.pumpWidget(
         MaterialApp(
+          // Nothing here depends on the locale, and it is named anyway: an
+          // unstated locale is a trap for whoever later adds an assertion
+          // about rendered text to a theme test.
+          locale: AppLocales.french,
           theme: theme,
           home: Builder(
             builder: (BuildContext context) {
@@ -186,6 +191,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: AppLocales.french,
         theme: ThemeData(brightness: Brightness.dark),
         home: Builder(
           builder: (BuildContext context) {
