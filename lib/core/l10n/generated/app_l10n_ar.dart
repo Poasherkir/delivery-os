@@ -217,4 +217,30 @@ class AppL10nAr extends AppL10n {
 
   @override
   String get customerLookupUse => 'استخدم هذا الزبون';
+
+  @override
+  String get scannerTitle => 'مسح الطرد';
+
+  @override
+  String get scannerAim => 'وجّه الكاميرا نحو الرمز';
+
+  @override
+  String get scannerTorch => 'الإضاءة';
+
+  @override
+  String get scannerManualEntry => 'إدخال يدوي';
+
+  @override
+  String get scannerPermissionTitle => 'الكاميرا غير مسموح بها';
+
+  @override
+  String get scannerPermissionBody =>
+      'الكاميرا ضرورية للمسح. يمكنك إدخال الرقم يدويًا، أو السماح بالوصول من إعدادات الهاتف.';
+
+  @override
+  String get scannerUnavailableTitle => 'الكاميرا غير متاحة';
+
+  @override
+  String get scannerUnavailableBody =>
+      'لم يبدأ الماسح. أدخل الرقم يدويًا للمتابعة.';
 }

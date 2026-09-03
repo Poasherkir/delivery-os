@@ -474,6 +474,54 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Utiliser ce client'**
   String get customerLookupUse;
+
+  /// Title of the barcode scanner screen. Names the object the driver is holding, not the technology.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner le colis'**
+  String get scannerTitle;
+
+  /// Instruction over the camera preview. Short because it is read at arm's length while holding a parcel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cadrez le code-barres'**
+  String get scannerAim;
+
+  /// Toggles the camera flash. Named for what it does for the driver — a stairwell at 07:00 is dark — rather than 'flash' or 'torch mode'.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lumière'**
+  String get scannerTorch;
+
+  /// Skips the scan and opens the order form directly. Always available, not only after a failure: a damaged or missing label is ordinary, and a scanner that traps the driver is worse than no scanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisir à la main'**
+  String get scannerManualEntry;
+
+  /// Shown when camera permission was refused. States the fact without blaming — refusing a permission is a reasonable thing to have done.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil photo non autorisé'**
+  String get scannerPermissionTitle;
+
+  /// Offers manual entry FIRST and settings second. A driver who declined at 07:00 in an agency needs to enter the order now, not navigate Android settings; the entry form works without a scan. Same reasoning as an unparseable phone not blocking order creation.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'appareil photo est nécessaire pour scanner. Vous pouvez saisir le numéro à la main, ou autoriser l\'accès dans les réglages du téléphone.'**
+  String get scannerPermissionBody;
+
+  /// Shown when the camera cannot start for any reason other than permission — hardware in use by another app, or a device fault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil photo indisponible'**
+  String get scannerUnavailableTitle;
+
+  /// Deliberately does not guess the cause. The driver's next step is the same whatever it was.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le scanner n\'a pas pu démarrer. Saisissez le numéro à la main pour continuer.'**
+  String get scannerUnavailableBody;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

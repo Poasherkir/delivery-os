@@ -65,5 +65,13 @@
   "customerDeleted": "تم حذف الزبون.",
   "customerLookupExisting": "هذا الزبون موجود عندك",
   "customerLookupOrders": "{count, plural, =0{لا توجد طلبات} =1{طلب واحد} =2{طلبان} few{{count} طلبات} many{{count} طلبًا} other{{count} طلب}}",
-  "customerLookupUse": "استخدم هذا الزبون"
+  "customerLookupUse": "استخدم هذا الزبون",
+  "scannerTitle": "مسح الطرد",
+  "scannerAim": "وجّه الكاميرا نحو الرمز",
+  "scannerTorch": "الإضاءة",
+  "scannerManualEntry": "إدخال يدوي",
+  "scannerPermissionTitle": "الكاميرا غير مسموح بها",
+  "scannerPermissionBody": "الكاميرا ضرورية للمسح. يمكنك إدخال الرقم يدويًا، أو السماح بالوصول من إعدادات الهاتف.",
+  "scannerUnavailableTitle": "الكاميرا غير متاحة",
+  "scannerUnavailableBody": "لم يبدأ الماسح. أدخل الرقم يدويًا للمتابعة."
 }

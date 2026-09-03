@@ -9,6 +9,7 @@ import '../features/customers/presentation/customer_form_screen.dart';
 import '../features/customers/presentation/customers_screen.dart';
 import '../features/history/presentation/history_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/ingestion/presentation/scanner_screen.dart';
 import '../features/money/presentation/money_screen.dart';
 import '../features/more/presentation/more_screen.dart';
 import '../features/orders/presentation/orders_screen.dart';
@@ -66,6 +67,15 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: CustomerFormScreen.editPathPattern,
         builder: (BuildContext context, GoRouterState state) =>
             CustomerFormScreen(customerId: state.pathParameters['id']),
+      ),
+
+      // The scanner, pushed above the shell. It is an action on Orders rather
+      // than a destination, so it covers the bottom bar rather than becoming a
+      // sixth tab.
+      GoRoute(
+        path: ScannerScreen.path,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ScannerScreen(),
       ),
 
       // Debug only. kDebugMode is a compile-time constant, so the route and

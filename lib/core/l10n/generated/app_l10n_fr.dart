@@ -217,4 +217,30 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get customerLookupUse => 'Utiliser ce client';
+
+  @override
+  String get scannerTitle => 'Scanner le colis';
+
+  @override
+  String get scannerAim => 'Cadrez le code-barres';
+
+  @override
+  String get scannerTorch => 'Lumière';
+
+  @override
+  String get scannerManualEntry => 'Saisir à la main';
+
+  @override
+  String get scannerPermissionTitle => 'Appareil photo non autorisé';
+
+  @override
+  String get scannerPermissionBody =>
+      'L\'appareil photo est nécessaire pour scanner. Vous pouvez saisir le numéro à la main, ou autoriser l\'accès dans les réglages du téléphone.';
+
+  @override
+  String get scannerUnavailableTitle => 'Appareil photo indisponible';
+
+  @override
+  String get scannerUnavailableBody =>
+      'Le scanner n\'a pas pu démarrer. Saisissez le numéro à la main pour continuer.';
 }

@@ -263,5 +263,37 @@
   "customerLookupUse": "Utiliser ce client",
   "@customerLookupUse": {
     "description": "One tap to reuse the existing customer instead of creating a second record for the same person."
+  },
+  "scannerTitle": "Scanner le colis",
+  "@scannerTitle": {
+    "description": "Title of the barcode scanner screen. Names the object the driver is holding, not the technology."
+  },
+  "scannerAim": "Cadrez le code-barres",
+  "@scannerAim": {
+    "description": "Instruction over the camera preview. Short because it is read at arm's length while holding a parcel."
+  },
+  "scannerTorch": "Lumière",
+  "@scannerTorch": {
+    "description": "Toggles the camera flash. Named for what it does for the driver — a stairwell at 07:00 is dark — rather than 'flash' or 'torch mode'."
+  },
+  "scannerManualEntry": "Saisir à la main",
+  "@scannerManualEntry": {
+    "description": "Skips the scan and opens the order form directly. Always available, not only after a failure: a damaged or missing label is ordinary, and a scanner that traps the driver is worse than no scanner."
+  },
+  "scannerPermissionTitle": "Appareil photo non autorisé",
+  "@scannerPermissionTitle": {
+    "description": "Shown when camera permission was refused. States the fact without blaming — refusing a permission is a reasonable thing to have done."
+  },
+  "scannerPermissionBody": "L'appareil photo est nécessaire pour scanner. Vous pouvez saisir le numéro à la main, ou autoriser l'accès dans les réglages du téléphone.",
+  "@scannerPermissionBody": {
+    "description": "Offers manual entry FIRST and settings second. A driver who declined at 07:00 in an agency needs to enter the order now, not navigate Android settings; the entry form works without a scan. Same reasoning as an unparseable phone not blocking order creation."
+  },
+  "scannerUnavailableTitle": "Appareil photo indisponible",
+  "@scannerUnavailableTitle": {
+    "description": "Shown when the camera cannot start for any reason other than permission — hardware in use by another app, or a device fault."
+  },
+  "scannerUnavailableBody": "Le scanner n'a pas pu démarrer. Saisissez le numéro à la main pour continuer.",
+  "@scannerUnavailableBody": {
+    "description": "Deliberately does not guess the cause. The driver's next step is the same whatever it was."
   }
 }
