@@ -268,6 +268,13 @@ full gate, as run for M0.
   `project_rules_test.dart` is the mechanical half of this; the flag is the half
   a test cannot cover, because a test cannot tell you the file it is reading is
   not the file being loaded.
+- **A method returning a `Future` is `async`, even before it awaits anything.**
+  A bare `throw` in a non-`async` function that returns a `Future` escapes
+  *synchronously* — before the caller's `await`, and past `expectLater`, which
+  is where it was found at M1-11: a merge's "cannot merge a customer into
+  itself" check threw where no caller could catch it. `async` makes every exit
+  travel through the Future, which is what the signature already promised. Not
+  a guard, a convention: `unawaited_futures` does not see this shape.
 - **Amend freely while unpushed, never after.** A commit that fails its own CI
   gate must not sit permanently in history, so fix it by amending while the
   branch is still local. Once a commit is on the remote it is immutable: fix
@@ -292,6 +299,15 @@ full gate, as run for M0.
   and stays green forever because the subject set never comes back. Three caught
   this way too, which is why it is here: assert the subject set is non-empty, or
   fail when it is.
+
+  **The sibling case: a fixture that cannot produce both outcomes.** Not an
+  empty subject set — a *non-discriminating* one, where the two states the
+  assertion is meant to tell apart are identical in the fixture. Found at
+  M1-11: a test asserted a merged row's `updated_at` had moved, against a
+  `FixedClock` that had not been advanced between the write and the check, so
+  the timestamps were equal whether or not the code stamped anything. The
+  question to ask is not only "would this pass against an empty
+  implementation" but "can this fixture produce a failure at all".
 
   **Where it is cheap, prove the test by breaking the thing it guards.** Plant a
   real violation, watch the test fail, revert, confirm no residue. That is how
