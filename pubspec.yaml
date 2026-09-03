@@ -53,6 +53,15 @@ dependencies:
   path_provider: ^2.1.6
   shared_preferences: ^2.5.5
   sqlite3: ^3.5.2
+  # Hands a `tel:` or `wa.me` link to whichever app the driver has, at M1-10.
+  #
+  # **Not a network client, and not the M4 carve-out.** It opens an Android
+  # intent; it never fetches anything itself. `tel:` reaches the dialer, which
+  # shows the number and waits for the driver to press call — this app cannot
+  # place a call, which is why no permission is involved. The `https` entry in
+  # the manifest's <queries> is for WhatsApp's own link handler, not for us to
+  # request a page.
+  url_launcher: ^6.3.1
   uuid: ^4.6.0
 
 dev_dependencies:

@@ -359,4 +359,47 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get orderListNeedsAddress => 'Adresse à ajouter';
+
+  @override
+  String get customerProfileTitle => 'Fiche client';
+
+  @override
+  String get customerActionCall => 'Appeler';
+
+  @override
+  String get customerActionWhatsApp => 'WhatsApp';
+
+  @override
+  String get customerActionUnavailable =>
+      'Aucune application ne peut ouvrir ce lien.';
+
+  @override
+  String get customerAddressesTitle => 'Adresses';
+
+  @override
+  String get customerAddressesEmpty => 'Aucune adresse enregistrée.';
+
+  @override
+  String get customerAddressPrimary => 'Principale';
+
+  @override
+  String get customerHistoryTitle => 'Colis';
+
+  @override
+  String get customerHistoryEmpty => 'Aucun colis pour ce client.';
+
+  @override
+  String customerHistoryShowingSome(int shown, int total) {
+    return '$shown sur $total colis';
+  }
+
+  @override
+  String get customerHistoryShowAll => 'Tout afficher';
+
+  @override
+  String get customerPhoneNeedsReview =>
+      'Ce numéro n\'a pas pu être lu. Corrigez-le pour pouvoir appeler.';
+
+  @override
+  String get customerEdit => 'Modifier';
 }

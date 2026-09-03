@@ -111,5 +111,18 @@
   "ordersEmptyTitle": "لا توجد طرود اليوم",
   "ordersEmptyBody": "امسح طردًا للبدء.",
   "orderListNeedsCustomer": "زبون يُضاف",
-  "orderListNeedsAddress": "عنوان يُضاف"
+  "orderListNeedsAddress": "عنوان يُضاف",
+  "customerProfileTitle": "بطاقة الزبون",
+  "customerActionCall": "اتصال",
+  "customerActionWhatsApp": "واتساب",
+  "customerActionUnavailable": "لا يوجد تطبيق يفتح هذا الرابط.",
+  "customerAddressesTitle": "العناوين",
+  "customerAddressesEmpty": "لا يوجد عنوان مسجّل.",
+  "customerAddressPrimary": "الأساسي",
+  "customerHistoryTitle": "الطرود",
+  "customerHistoryEmpty": "لا توجد طرود لهذا الزبون.",
+  "customerHistoryShowingSome": "{shown} من {total} طرد",
+  "customerHistoryShowAll": "عرض الكل",
+  "customerPhoneNeedsReview": "تعذّرت قراءة هذا الرقم. صحّحه لتتمكن من الاتصال.",
+  "customerEdit": "تعديل"
 }

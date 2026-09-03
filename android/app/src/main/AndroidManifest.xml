@@ -71,5 +71,26 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!--
+          Package visibility for the customer profile's call and WhatsApp
+          actions (M1-10). Android 11 and above hide installed apps unless
+          they are declared here, and url_launcher's canLaunchUrl answers
+          "no" for anything it cannot see — so without these two the buttons
+          would be permanently disabled on every modern phone, silently and
+          only on a real device.
+
+          Declaring an intent is not requesting a permission and grants no
+          access to anything: it lets this app ask whether *something* can
+          open a dial or a link, and hand it over. The dialer then shows the
+          number and waits for the driver — this app never places a call.
+        -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

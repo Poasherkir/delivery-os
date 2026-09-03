@@ -357,4 +357,46 @@ class AppL10nAr extends AppL10n {
 
   @override
   String get orderListNeedsAddress => 'عنوان يُضاف';
+
+  @override
+  String get customerProfileTitle => 'بطاقة الزبون';
+
+  @override
+  String get customerActionCall => 'اتصال';
+
+  @override
+  String get customerActionWhatsApp => 'واتساب';
+
+  @override
+  String get customerActionUnavailable => 'لا يوجد تطبيق يفتح هذا الرابط.';
+
+  @override
+  String get customerAddressesTitle => 'العناوين';
+
+  @override
+  String get customerAddressesEmpty => 'لا يوجد عنوان مسجّل.';
+
+  @override
+  String get customerAddressPrimary => 'الأساسي';
+
+  @override
+  String get customerHistoryTitle => 'الطرود';
+
+  @override
+  String get customerHistoryEmpty => 'لا توجد طرود لهذا الزبون.';
+
+  @override
+  String customerHistoryShowingSome(int shown, int total) {
+    return '$shown من $total طرد';
+  }
+
+  @override
+  String get customerHistoryShowAll => 'عرض الكل';
+
+  @override
+  String get customerPhoneNeedsReview =>
+      'تعذّرت قراءة هذا الرقم. صحّحه لتتمكن من الاتصال.';
+
+  @override
+  String get customerEdit => 'تعديل';
 }

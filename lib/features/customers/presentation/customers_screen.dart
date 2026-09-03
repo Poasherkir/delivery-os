@@ -10,6 +10,7 @@ import '../../../domain/entities/customer.dart';
 import '../../../shared/widgets/app_text.dart';
 import '../controllers/customer_list_controller.dart';
 import 'customer_form_screen.dart';
+import 'customer_profile_screen.dart';
 
 /// The customer list, reached from More.
 ///
@@ -119,7 +120,9 @@ class _CustomerTile extends StatelessWidget {
       trailing: customer.needsPhoneReview
           ? _ReviewBadge(label: l10n.customerNeedsPhoneReview)
           : Icon(Icons.chevron_right, color: colors.textDisabled),
-      onTap: () => context.push(CustomerFormScreen.editPath(customer.id)),
+      // The profile, not the form. Tapping a customer to see who they are and
+      // reach them is the common case; editing is a step taken from there.
+      onTap: () => context.push(CustomerProfileScreen.pathFor(customer.id)),
     );
   }
 }

@@ -750,6 +750,84 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Adresse à ajouter'**
   String get orderListNeedsAddress;
+
+  /// Title of the customer profile screen, reached by tapping a customer in the list. `Fiche` is what a driver calls the record itself.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fiche client'**
+  String get customerProfileTitle;
+
+  /// Opens the phone app with the number filled in. The driver presses call — this app never dials on its own, which is why no permission is involved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appeler'**
+  String get customerActionCall;
+
+  /// Opens a WhatsApp chat. A brand name, so it is not translated. Offered only for a mobile number: a landline cannot have WhatsApp, and a button that always fails is worse than one that is not there.
+  ///
+  /// In fr, this message translates to:
+  /// **'WhatsApp'**
+  String get customerActionWhatsApp;
+
+  /// Shown when nothing on the device handled the call or WhatsApp link — most often WhatsApp simply not being installed. States the fact rather than blaming, and does not guess which app was missing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune application ne peut ouvrir ce lien.'**
+  String get customerActionUnavailable;
+
+  /// Section heading above the customer's saved addresses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresses'**
+  String get customerAddressesTitle;
+
+  /// Shown when a customer has no address yet — ordinary for someone entered from a manifest before a delivery was made.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune adresse enregistrée.'**
+  String get customerAddressesEmpty;
+
+  /// Marks which of several addresses is the default one the entry form offers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Principale'**
+  String get customerAddressPrimary;
+
+  /// Section heading above the customer's parcels. `Colis`, the driver's word, consistent with the entry form and the orders list.
+  ///
+  /// In fr, this message translates to:
+  /// **'Colis'**
+  String get customerHistoryTitle;
+
+  /// Shown when a customer exists but has no parcels — possible after a merge, or for a record created before their first order.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun colis pour ce client.'**
+  String get customerHistoryEmpty;
+
+  /// Says the history is windowed rather than presenting a truncated list as complete. The profile opens with the 50 most recent; a driver with a year of history is not made to wait for all of them.
+  ///
+  /// In fr, this message translates to:
+  /// **'{shown} sur {total} colis'**
+  String customerHistoryShowingSome(int shown, int total);
+
+  /// Loads the rest of the history. Explicit, because loading it by default is the query that is fast on test data and slow on a real database.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout afficher'**
+  String get customerHistoryShowAll;
+
+  /// Shown on the profile when the number never parsed. Explains why there are no call actions rather than leaving them missing without a reason — and phrases it as our failure to read it, not the driver's to type it.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro n\'a pas pu être lu. Corrigez-le pour pouvoir appeler.'**
+  String get customerPhoneNeedsReview;
+
+  /// Opens the customer form from the profile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get customerEdit;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

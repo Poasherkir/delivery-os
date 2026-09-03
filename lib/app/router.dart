@@ -7,6 +7,7 @@ import '../features/_dev/presentation/token_gallery_screen.dart';
 import '../features/companies/presentation/companies_screen.dart';
 import '../features/companies/presentation/company_form_screen.dart';
 import '../features/customers/presentation/customer_form_screen.dart';
+import '../features/customers/presentation/customer_profile_screen.dart';
 import '../features/customers/presentation/customers_screen.dart';
 import '../features/history/presentation/history_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -69,6 +70,15 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: CustomerFormScreen.editPathPattern,
         builder: (BuildContext context, GoRouterState state) =>
             CustomerFormScreen(customerId: state.pathParameters['id']),
+      ),
+
+      // The profile, below the edit form's path so `/customers/:id` still
+      // resolves to the form. Tapping a customer opens this; editing is a
+      // deliberate second step from it.
+      GoRoute(
+        path: CustomerProfileScreen.pathPattern,
+        builder: (BuildContext context, GoRouterState state) =>
+            CustomerProfileScreen(customerId: state.pathParameters['id']!),
       ),
 
       // The scanner, pushed above the shell. It is an action on Orders rather

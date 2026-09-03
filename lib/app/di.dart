@@ -30,9 +30,11 @@ import '../data/repositories/drift_customer_merge_service.dart';
 import '../data/repositories/drift_customer_repository.dart';
 import '../data/repositories/drift_geography_repository.dart';
 import '../data/repositories/drift_order_repository.dart';
+import '../data/services/url_launcher_customer_contact.dart';
 import '../domain/repositories/address_repository.dart';
 import '../domain/repositories/batch_repository.dart';
 import '../domain/repositories/company_repository.dart';
+import '../domain/repositories/customer_contact.dart';
 import '../domain/repositories/customer_merge_service.dart';
 import '../domain/repositories/customer_repository.dart';
 import '../domain/repositories/geography_repository.dart';
@@ -292,6 +294,14 @@ final Provider<OrderRepository?> orderRepositoryProvider =
         ownerId: started.user.id,
       );
     });
+
+/// Handing a customer's number to the dialer or to WhatsApp.
+///
+/// Not derived from startup, unlike every repository around it: this touches
+/// no database and works whether or not one opened. Overridden in tests, which
+/// have no Android intents to launch.
+final Provider<CustomerContact> customerContactProvider =
+    Provider<CustomerContact>((Ref ref) => const UrlLauncherCustomerContact());
 
 /// Merging one customer into another — **null until the database is open**.
 final Provider<CustomerMergeService?> customerMergeServiceProvider =
