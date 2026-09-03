@@ -1636,6 +1636,50 @@ cannot fall between milestones.
 16. Commune picker with search.
 17. **Gate:** stopwatch test of 15 orders. Fix until it is under 4 minutes.
 
+**The interaction budget, measured at M1-09.**
+
+The stopwatch needs a phone and a real bordereau. The number most likely to
+*fail* the stopwatch does not: it is how many discrete things the driver has to
+do per parcel, and that is measurable on the form itself. If a returning
+customer cost twelve interactions no device would be fast enough and the form
+would need redesigning; if it costs four, the hardware question becomes the real
+one. `test/widget/order_entry_cost_test.dart` is the measurement.
+
+One interaction is one discrete act: a tap on a control, or typing the contents
+of one field. Moving focus to a field costs one and typing into it costs one, so
+filling a field is two — unless focus is already there. Aiming the camera is not
+counted, and neither is the FAB, which is paid once for the first parcel and
+never again: saving with *Enregistrer et scanner* reopens the camera itself.
+
+| Path | Interactions | Characters typed |
+|---|---|---|
+| Returning customer | **4** | 14 |
+| New customer | **11** | 44 |
+| No customer at all | **3** | 4 |
+
+Four for a returning customer: type the number into the field the scan already
+focused, reach the amount, type it, save. The address arrives with the customer
+untyped, which is the entire payoff of looking them up while the number is still
+being entered — and it is why this path is four rather than eleven.
+
+Eleven for a new customer, against a guess of ten. The extra one is the commune
+sheet, which costs three on its own: open, type, choose. Every one of the eleven
+is a fact only the driver has — the number, the name, which commune, which
+building, how much — and the form asks for nothing it could have derived. This
+is also the shrinking path: every new customer entered today is a returning
+customer tomorrow, and four is where a used app spends its mornings.
+
+At sixteen seconds a parcel, four interactions is four seconds each with the
+scan and a driver who is not a typist inside that. **The form is not the
+bottleneck; the remaining risk is the device.**
+
+The counts are asserted exactly rather than as ceilings, because they are a
+property of the *script* and cannot move on their own. What catches a form that
+started demanding more is that the minimum sequence still saves a complete
+parcel — attached to the right person, pointing at their door, carrying the
+money. Verified by making the address field required and watching the returning
+path fail by name.
+
 **Two things settled in M0 that constrain this milestone.**
 
 **A phone that fails to parse must not block order creation.** A driver standing
