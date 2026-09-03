@@ -1664,8 +1664,22 @@ field a phone number".
 
 ### Week 3–5 (M2)
 
-18. `OrderStateMachine` as a pure function with exhaustive transition tests.
+18. ~~`OrderStateMachine` as a pure function with exhaustive transition tests.~~
+    Built at M1-08 instead: `orders.status` is written the moment an order is
+    created, and invariant 6 says nothing writes a status without it.
 19. Batch creation and the batch list.
+
+    **M1 already has `ensureOpenBatch(companyId, serviceDate)` and nothing
+    else.** `orders.batch_id` is NOT NULL, so entry could not work without it —
+    that was a dependency, not this milestone arriving early. Closing,
+    settling, reopening and every batch screen are still here.
+
+    **The service date is a default, not a constraint.** `ServiceDay.from`
+    derives today's from the 04:00 cutoff, and the entry form never asks. A
+    driver entering tomorrow's orders tonight is a real case and it is *not* a
+    cutoff problem — it is "the batch has a date and the date can be chosen".
+    Choosing it belongs here, on a batch screen, not on the path measured with
+    a stopwatch.
 20. Next-stop card with call, WhatsApp, and navigate deep links.
 21. Delivered / failed / rescheduled flows writing `delivery_attempts`.
 22. Photo POD: capture, compress, store app-private, record GPS and timestamp.
