@@ -5,6 +5,7 @@ import 'package:delivery_os/core/utils/uuid_v7.dart';
 import 'package:delivery_os/data/db/app_database.dart';
 import 'package:delivery_os/data/db/bootstrap.dart';
 import 'package:delivery_os/data/db/daos/address_dao.dart';
+import 'package:delivery_os/data/db/daos/company_dao.dart';
 import 'package:delivery_os/data/db/daos/customer_dao.dart';
 import 'package:delivery_os/data/db/daos/user_settings_dao.dart';
 import 'package:delivery_os/domain/value_objects/customer_risk_flag.dart';
@@ -63,6 +64,9 @@ final class _Fixture {
   /// address to act on.
   CustomerAddress? pendingAddress;
 
+  /// Same, for the mutations that need an existing company.
+  Company? pendingCompany;
+
   CustomerDao get customers => CustomerDao(
     database: db,
     clock: clock,
@@ -84,6 +88,16 @@ final class _Fixture {
     wilayaCode: 16,
     communeId: 1601,
   );
+
+  CompanyDao get companies => CompanyDao(
+    database: db,
+    clock: clock,
+    uuid: uuid,
+    deviceId: 'guard-device',
+  );
+
+  Future<Company> aCompany([String name = 'Yalidine']) =>
+      companies.create(ownerId: userId, name: name);
 
   UserSettingsDao get settings => UserSettingsDao(
     database: db,
@@ -143,6 +157,32 @@ final List<_Mutation> _mutations = <_Mutation>[
       current: c!,
       phone: PhoneE164.parse('0550777888'),
     ),
+  ),
+  (
+    dao: 'CompanyDao',
+    method: 'create',
+    prepare: null,
+    invoke: (_Fixture f, Customer? _) => f.aCompany(),
+  ),
+  (
+    dao: 'CompanyDao',
+    method: 'edit',
+    prepare: (_Fixture f) async {
+      f.pendingCompany = await f.aCompany('ZR Express');
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) =>
+        f.companies.edit(current: f.pendingCompany!, notes: 'Bab Ezzouar hub'),
+  ),
+  (
+    dao: 'CompanyDao',
+    method: 'softDelete',
+    prepare: (_Fixture f) async {
+      f.pendingCompany = await f.aCompany('Anderson');
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) =>
+        f.companies.softDelete(f.pendingCompany!),
   ),
   (
     dao: 'UserSettingsDao',
