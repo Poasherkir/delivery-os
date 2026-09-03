@@ -6090,10 +6090,6 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {ownerId, companyId, trackingNumber},
-  ];
-  @override
   Order map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Order(
@@ -15389,6 +15385,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_orders_tracking',
     'CREATE INDEX idx_orders_tracking ON orders (owner_id, tracking_number)',
   );
+  late final Index idxOrdersOwnerCompanyTracking = Index(
+    'idx_orders_owner_company_tracking',
+    'CREATE UNIQUE INDEX idx_orders_owner_company_tracking ON orders (owner_id, company_id, tracking_number) WHERE deleted_at IS NULL',
+  );
   late final Index idxExpensesOwnerDate = Index(
     'idx_expenses_owner_date',
     'CREATE INDEX idx_expenses_owner_date ON expenses (owner_id, service_date DESC)',
@@ -15436,6 +15436,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxOrdersOwnerStatus,
     idxOrdersBatch,
     idxOrdersTracking,
+    idxOrdersOwnerCompanyTracking,
     idxExpensesOwnerDate,
     idxSettlementsOwnerDate,
     idxRemitOwnerCompany,

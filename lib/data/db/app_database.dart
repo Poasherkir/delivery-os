@@ -64,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Creates the FTS5 table and its triggers, in that order.
   Future<void> _createSearchIndex() async {
@@ -114,6 +114,28 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         await _createSearchIndex();
         await customStatement(backfillCustomerSearchIndex);
+      }
+
+      // v3 → v4: `(owner_id, company_id, tracking_number)` stops being a table
+      // constraint and becomes a unique index over live rows only.
+      //
+      // The bug it fixes is silent. A total constraint means a soft-deleted
+      // order permanently burns its tracking number: a driver who mistypes,
+      // deletes and re-enters is refused by a row that no longer exists, and
+      // the real parcel bearing that number can never be entered. The customer
+      // index has been partial since v1 for the identical reason.
+      //
+      // SQLite cannot drop a table constraint, so this is a rebuild: drift
+      // creates the new shape, copies every row and swaps the names. No
+      // `columnTransformer` — not one column changes, only the constraint.
+      if (from < 4) {
+        await m.alterTable(TableMigration(orders));
+        // The rebuild carries the table's existing indexes across, but the
+        // replacement constraint is not one of them — it did not exist in the
+        // database being rebuilt. Creating it is the migration. Without this
+        // line the constraint is simply gone: two live orders for one parcel,
+        // and a batch total wrong by a whole delivery, with nothing to notice.
+        await m.createIndex(idxOrdersOwnerCompanyTracking);
       }
     },
 

@@ -131,6 +131,10 @@ void main() {
         'idx_orders_owner_status',
         'idx_orders_batch',
         'idx_orders_tracking',
+        // Not in §6.3, which specified this uniqueness as a table constraint.
+        // v4 moved it to a partial index so a soft-deleted order stops holding
+        // its tracking number hostage — see the migration and §6.2's note.
+        'idx_orders_owner_company_tracking',
         'idx_batches_owner_date',
         'idx_customers_owner_phone',
         'idx_addr_commune',
@@ -161,6 +165,15 @@ void main() {
         contains('WHERE deleted_at IS NULL'),
       );
       expect(sql['idx_orders_batch'], contains('WHERE deleted_at IS NULL'));
+      expect(
+        sql['idx_orders_owner_company_tracking'],
+        contains('WHERE deleted_at IS NULL'),
+      );
+      expect(
+        sql['idx_orders_owner_company_tracking'],
+        contains('UNIQUE'),
+        reason: 'narrowed to live rows, not dropped',
+      );
       expect(
         sql['idx_customers_owner_phone'],
         contains('WHERE deleted_at IS NULL'),

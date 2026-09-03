@@ -7,6 +7,7 @@ import 'package:test/test.dart';
 import 'schema_versions/schema.dart';
 import 'schema_versions/schema_v1.dart' as v1;
 import 'schema_versions/schema_v2.dart' as v2;
+import 'schema_versions/schema_v3.dart' as v3;
 
 String _id(int n) => '0199a1b2-c3d4-7000-8000-${n.toString().padLeft(12, '0')}';
 
@@ -78,14 +79,14 @@ void main() {
       // database (whose onCreate runs createAll from the table definitions),
       // and compares the two.
       final AppDatabase db = AppDatabase(NativeDatabase.memory());
-      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await verifier.migrateAndValidate(db, 4, options: _strict);
       await db.close();
     });
 
     test('the helper knows exactly the versions that are dumped', () {
       // A version present in code but absent from drift_schema/ would fail at
       // migration time on a driver's phone rather than here.
-      expect(GeneratedHelper.versions, <int>[1, 2, 3]);
+      expect(GeneratedHelper.versions, <int>[1, 2, 3, 4]);
     });
   });
 
@@ -97,7 +98,7 @@ void main() {
 
     Future<AppDatabase> migrate(InitializedSchema schema) async {
       final AppDatabase db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await verifier.migrateAndValidate(db, 4, options: _strict);
       await db.close();
       return AppDatabase(schema.newConnection());
     }
@@ -243,7 +244,7 @@ void main() {
       await old.close();
 
       final AppDatabase db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await verifier.migrateAndValidate(db, 4, options: _strict);
       await db.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -283,7 +284,7 @@ void main() {
       await old.close();
 
       final AppDatabase db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await verifier.migrateAndValidate(db, 4, options: _strict);
       await db.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -315,7 +316,7 @@ void main() {
       await old.close();
 
       final AppDatabase db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 3, options: _strict);
+      await verifier.migrateAndValidate(db, 4, options: _strict);
       await db.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -337,6 +338,165 @@ void main() {
           .get();
 
       expect(hits, hasLength(1));
+    });
+  });
+
+  group('v3 to v4: a deleted order stops holding its number hostage', () {
+    // The bug this fixes is silent and permanent. Under v3,
+    // `(owner_id, company_id, tracking_number)` was a table constraint over
+    // every row including the tombstones, so a driver who mistyped a tracking
+    // number, deleted the order and re-entered it was refused by a row that no
+    // longer exists — and the real parcel bearing that number could never be
+    // entered at all. `idx_customers_owner_phone` has been partial since v1 for
+    // exactly this reason.
+
+    /// A v3 database with one user, one company and one batch to hang an order
+    /// on. Foreign keys make all three necessary.
+    Future<v3.DatabaseAtV3> seedV3(InitializedSchema schema) async {
+      final v3.DatabaseAtV3 old = v3.DatabaseAtV3(schema.newConnection());
+      await old.customStatement(
+        'INSERT INTO users (id, created_at, updated_at) '
+        "VALUES ('${_id(1)}', 1000, 2000)",
+      );
+      await old.customStatement(
+        'INSERT INTO companies (id, owner_id, name, is_active, created_at, '
+        "updated_at, version) VALUES ('${_id(2)}', '${_id(1)}', 'Yalidine', "
+        '1, 1000, 2000, 1)',
+      );
+      await old.customStatement(
+        'INSERT INTO batches (id, owner_id, company_id, service_date, status, '
+        "created_at, updated_at, version) VALUES ('${_id(6)}', '${_id(1)}', "
+        "'${_id(2)}', '2026-09-03', 'open', 1000, 2000, 1)",
+      );
+      return old;
+    }
+
+    String insertOrder(String id, String tracking, {int? deletedAt}) =>
+        'INSERT INTO orders (id, owner_id, batch_id, company_id, '
+        'tracking_number, delivery_type, status, priority, product_value, '
+        'cod_amount, delivery_fee, company_amount, driver_commission, '
+        'other_fees, collected_amount, attempt_count, created_at, updated_at, '
+        "deleted_at, version) VALUES ('$id', '${_id(1)}', '${_id(6)}', "
+        "'${_id(2)}', '$tracking', 'home', 'pending', 0, 0, 0, 0, 0, 0, 0, 0, "
+        '0, 1000, 2000, ${deletedAt ?? 'NULL'}, 1)';
+
+    Future<AppDatabase> migrate(InitializedSchema schema) async {
+      final AppDatabase db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 4, options: _strict);
+      await db.close();
+      return AppDatabase(schema.newConnection());
+    }
+
+    test('the v3 database really did refuse it', () async {
+      // The half that proves the migration is worth having. Without this, the
+      // test below would pass just as well against a v3 that never had the
+      // problem.
+      final InitializedSchema schema = await verifier.schemaAt(3);
+      final v3.DatabaseAtV3 old = await seedV3(schema);
+      addTearDown(old.close);
+
+      await old.customStatement(
+        insertOrder(_id(7), 'YAL-0001', deletedAt: 3000),
+      );
+
+      await expectLater(
+        old.customStatement(insertOrder(_id(8), 'YAL-0001')),
+        throwsA(anything),
+      );
+    });
+
+    test('and after migrating, the same number can be entered', () async {
+      final InitializedSchema schema = await verifier.schemaAt(3);
+      final v3.DatabaseAtV3 old = await seedV3(schema);
+      await old.customStatement(
+        insertOrder(_id(7), 'YAL-0001', deletedAt: 3000),
+      );
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      await after.customStatement(insertOrder(_id(8), 'YAL-0001'));
+
+      final QueryRow row = await after
+          .customSelect(
+            'SELECT count(*) c FROM orders WHERE tracking_number = ?1',
+            variables: <Variable<Object>>[Variable<String>('YAL-0001')],
+          )
+          .getSingle();
+      expect(row.read<int>('c'), 2);
+    });
+
+    test('but two live orders still cannot share one', () async {
+      // The constraint is narrowed, not dropped. Losing it would let a double
+      // scan create two orders for one parcel, and the batch total would be
+      // wrong by a whole delivery.
+      final InitializedSchema schema = await verifier.schemaAt(3);
+      final v3.DatabaseAtV3 old = await seedV3(schema);
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      await after.customStatement(insertOrder(_id(7), 'YAL-0001'));
+
+      await expectLater(
+        after.customStatement(insertOrder(_id(8), 'YAL-0001')),
+        throwsA(anything),
+      );
+    });
+
+    test('and the index that enforces it is the partial one', () async {
+      final InitializedSchema schema = await verifier.schemaAt(3);
+      final v3.DatabaseAtV3 old = await seedV3(schema);
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      final QueryRow index = await after
+          .customSelect(
+            "SELECT sql FROM sqlite_master WHERE type = 'index' "
+            "AND name = 'idx_orders_owner_company_tracking'",
+          )
+          .getSingle();
+
+      expect(index.read<String>('sql'), contains('WHERE deleted_at IS NULL'));
+      expect(index.read<String>('sql'), contains('UNIQUE'));
+    });
+
+    test('an existing order comes through the rebuild unchanged', () async {
+      // A rebuild copies rows. It must not restamp them and it must not lose
+      // the money, which is what a settlement is reproduced from.
+      final InitializedSchema schema = await verifier.schemaAt(3);
+      final v3.DatabaseAtV3 old = await seedV3(schema);
+      await old.customStatement(
+        'INSERT INTO orders (id, owner_id, batch_id, company_id, '
+        'tracking_number, delivery_type, status, priority, product_value, '
+        'cod_amount, delivery_fee, company_amount, driver_commission, '
+        'other_fees, collected_amount, attempt_count, created_at, updated_at, '
+        "version) VALUES ('${_id(7)}', '${_id(1)}', '${_id(6)}', '${_id(2)}', "
+        "'YAL-0001', 'stopdesk', 'delivered', 2, -123457, $_cod, -4211, "
+        '-610038, $_commission, -1013, $_cod, 3, 1000, 2000, 5)',
+      );
+      await old.close();
+
+      final AppDatabase after = await migrate(schema);
+      addTearDown(after.close);
+
+      final QueryRow row = await after
+          .customSelect(
+            'SELECT tracking_number, status, cod_amount, driver_commission, '
+            'version, attempt_count FROM orders',
+          )
+          .getSingle();
+
+      expect(row.read<String>('tracking_number'), 'YAL-0001');
+      expect(row.read<String>('status'), 'delivered');
+      expect(row.read<int>('cod_amount'), _cod);
+      expect(row.read<int>('driver_commission'), _commission);
+      expect(row.read<int>('version'), 5);
+      expect(row.read<int>('attempt_count'), 3);
     });
   });
 
@@ -506,7 +666,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 3, options: _strict);
+      await verifier.migrateAndValidate(migrated, 4, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -532,7 +692,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 3, options: _strict);
+      await verifier.migrateAndValidate(migrated, 4, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -580,7 +740,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 3, options: _strict);
+      await verifier.migrateAndValidate(migrated, 4, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());
@@ -609,7 +769,7 @@ void main() {
       await old.close();
 
       final AppDatabase migrated = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(migrated, 3, options: _strict);
+      await verifier.migrateAndValidate(migrated, 4, options: _strict);
       await migrated.close();
 
       final AppDatabase after = AppDatabase(schema.newConnection());

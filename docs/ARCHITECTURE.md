@@ -616,7 +616,9 @@ CREATE TABLE orders (
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at        TIMESTAMPTZ,
   version           INT NOT NULL DEFAULT 1,
-  UNIQUE (owner_id, company_id, tracking_number)
+  -- Corrected at schema v4: this was a table constraint and is now a
+  -- partial unique index (see 6.3), so a soft-deleted order stops holding
+  -- its tracking number hostage.
 );
 
 CREATE TABLE delivery_attempts (
@@ -802,6 +804,16 @@ CREATE INDEX idx_customers_name_trgm ON customers USING gin (display_name gin_tr
 
 -- Duplicate detection on import
 CREATE INDEX idx_orders_tracking ON orders(owner_id, tracking_number);
+
+-- One LIVE order per tracking number per company. Written above as a table
+-- constraint; corrected at schema v4, because a total constraint means a
+-- soft-deleted order permanently burns its number — a driver who mistypes,
+-- deletes and re-enters is refused by a row that no longer exists, and the
+-- real parcel bearing that number can never be entered. The customer phone
+-- index has been partial for the identical reason since v1.
+CREATE UNIQUE INDEX idx_orders_owner_company_tracking
+  ON orders(owner_id, company_id, tracking_number)
+  WHERE deleted_at IS NULL;
 
 -- Geospatial: nearest customers, zone analytics
 CREATE INDEX idx_addr_geo ON customer_addresses USING GIST (geo);

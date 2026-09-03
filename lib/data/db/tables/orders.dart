@@ -35,9 +35,26 @@ import 'users.dart';
   'CREATE INDEX idx_orders_batch ON orders (batch_id) '
   'WHERE deleted_at IS NULL',
 )
-// Duplicate detection at import. Not unique — the uniqueness that matters
-// is (owner, company, tracking), which is a table constraint.
+// Duplicate detection at import. Not unique — the uniqueness that matters is
+// (owner, company, tracking), which is the partial unique index below.
 @TableIndex(name: 'idx_orders_tracking', columns: {#ownerId, #trackingNumber})
+// One live order per tracking number per company — and **live** is the whole
+// point of the `WHERE`.
+//
+// A total constraint would mean a soft-deleted order permanently burns its
+// number: a driver who mistypes, deletes and re-enters would be refused by a
+// row that no longer exists, and the real parcel bearing that number would be
+// unenterable forever. `idx_customers_owner_phone` is partial for exactly this
+// reason and this is the same problem — a tombstone must not hold a key
+// hostage.
+//
+// Company-scoped rather than global, because two companies hand out the same
+// numbers (§14) and a global rule would reject a real parcel.
+@TableIndex.sql(
+  'CREATE UNIQUE INDEX idx_orders_owner_company_tracking '
+  'ON orders (owner_id, company_id, tracking_number) '
+  'WHERE deleted_at IS NULL',
+)
 class Orders extends Table with UuidPrimaryKey, OwnedMutableColumns {
   @override
   TextColumn get ownerId =>
@@ -175,9 +192,4 @@ class Orders extends Table with UuidPrimaryKey, OwnedMutableColumns {
         ),
       )
       .nullable()();
-
-  @override
-  List<Set<Column<Object>>> get uniqueKeys => <Set<Column<Object>>>[
-    <Column<Object>>{ownerId, companyId, trackingNumber},
-  ];
 }
