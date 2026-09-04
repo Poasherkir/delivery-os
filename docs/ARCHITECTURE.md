@@ -1720,6 +1720,55 @@ field a phone number".
 
 ### Week 3–5 (M2)
 
+**What M1 hands to M2.**
+
+*Still owed from the M1 gate, all of it needing a physical device.* The
+interaction budget above measured the half that does not; these are the half
+that does, and none of them is blocked on code.
+
+| Owed | State |
+|---|---|
+| Seconds per order, both paths | Not captured. The budget says 4 interactions returning / 11 new; the stopwatch number was never written down |
+| Cold start, milliseconds | Not captured. Must be measured on a profile or release build — a debug build runs the VM in JIT and the number means nothing |
+| Arabic type-scale multiplier | Still `1.0`, still provisional. `app_text_test` now pins it explicitly, so the pin is only correct if 13sp Arabic actually reads level with 13sp French on a real screen |
+| 2 GB device | Untested |
+| Outdoor contrast | Unchecked |
+
+*Bordereau questions, now a standing item rather than a new one each
+milestone.* They stay open until a real manifest is in hand; provisional values
+stay provisional and do not block.
+
+- Which landline formats are real. `PhoneE164.nationalLength` assumes nine
+  national digits, and M1 found a concrete gap while testing: a landline whose
+  national number begins `213` is unparseable, because the parser strips that
+  as a country code. Unfixed on purpose — which formats exist is the question
+  the bordereau answers, and inventing a rule first is how the wrong one gets
+  baked in.
+- Wilaya structure as the carrier actually prints it.
+- The vocabulary for failure reasons.
+- Whether `وصل الشركة` is the term a driver uses for the manifest.
+
+*Deferred into M2 by decision, not by omission.*
+
+- Batch lifecycle: closing, settling, reopening, and the screens for them. M1
+  has `ensureOpenBatch` and nothing else, and `BatchNotOpenException` exists
+  precisely so the states M2 introduces cannot be reached silently before then.
+- **Choosing a batch's service date.** M1 derives it from the 04:00 cutoff and
+  never asks. The derived date is a default, not a constraint.
+- The order status badge, and the delivery flow that gives it something to say.
+  Nothing before M2 writes any status but `pending`, so a badge today would
+  render the same word on every row.
+- `matrix_cache` purge and outbox trim.
+- Three screens are exempt from the tap-target registry with `TODO(M2)`
+  markers: `database_reset_screen`, `more_screen`, `commune_picker_sheet`. Each
+  is reachable and untested for tap targets; the exemptions name that rather
+  than hide it.
+
+*One thing M3 owes, recorded in its own section:* orders entered before their
+company had a payment rule carry a null `payment_rule_version`, and the
+settlement engine needs a decided policy for them.
+
+
 18. ~~`OrderStateMachine` as a pure function with exhaustive transition tests.~~
     Built at M1-08 instead: `orders.status` is written the moment an order is
     created, and invariant 6 says nothing writes a status without it.
