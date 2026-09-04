@@ -45,6 +45,7 @@ const Map<String, String> measuredBy = <String, String>{
   'order_entry_screen.dart': 'test/widget/order_entry_screen_test.dart',
   'orders_screen.dart': 'test/widget/orders_screen_test.dart',
   'scanner_screen.dart': 'test/widget/scanner_screen_test.dart',
+  'settings_screen.dart': 'test/widget/settings_screen_test.dart',
 };
 
 /// Screens with nothing to measure, each with the reason.
@@ -57,9 +58,6 @@ const Map<String, String> nothingToMeasure = <String, String>{
   'history_screen.dart': 'placeholder: renders SizedBox.expand, no controls',
   'money_screen.dart': 'placeholder: renders SizedBox.expand, no controls',
   'route_screen.dart': 'placeholder: renders SizedBox.expand, no controls',
-  'settings_screen.dart':
-      'placeholder: an AppBar and SizedBox.expand. The language picker it '
-      'will hold is M1-00 work that landed in the app shell instead',
   'token_gallery_screen.dart':
       'debug only, behind kDebugMode and tree-shaken out of a release build. '
       'It is a specimen sheet for reading tokens, not a screen a driver taps',
