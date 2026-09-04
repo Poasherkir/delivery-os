@@ -266,7 +266,7 @@ Flutter app ──(outbox sync)── Supabase
 | | Zone heatmaps | V3 |
 | | AI performance analysis | V3 |
 | **Platform** | Offline-first, no account | MVP |
-| | AR/FR localization, RTL | MVP |
+| | AR/FR/EN localization, RTL | MVP |
 | | Dark/light theme | MVP |
 | | Local encrypted backup/restore | V1.5 |
 | | Cloud sync, multi-device | V2 |
@@ -281,7 +281,7 @@ Flutter app ──(outbox sync)── Supabase
 
 **MVP (ship in 8–10 weeks).** One driver, one phone, no account, no internet required except for map tiles and the matrix call. Success criterion: a real driver uses it for a full week instead of his notebook.
 
-Batches, orders, customers with learned pins, companies with payment rules, on-device route optimization, next-stop workflow, photo POD, complete money ledger with settlement and remittance, history, AR/FR, offline everything.
+Batches, orders, customers with learned pins, companies with payment rules, on-device route optimization, next-stop workflow, photo POD, complete money ledger with settlement and remittance, history, AR/FR/EN, offline everything.
 
 **V1.5 (weeks 11–16).** The quality-of-life layer that makes it stick: paste/OCR ingestion, end-of-day PDF for WhatsApp, encrypted backup/restore, negotiated-COD flow, basic analytics, CSV export.
 

@@ -509,5 +509,17 @@
   "customerEdit": "Modifier",
   "@customerEdit": {
     "description": "Opens the customer form from the profile."
+  },
+  "languageArabic": "العربية",
+  "@languageArabic": {
+    "description": "The Arabic language, named in Arabic. **Identical in every bundle and never translated.** A language picker is the one screen a driver reaches when the app is in a language they cannot read, and they find their own by recognising it — 'Arabe' is no help to someone who only reads Arabic. Endonyms, like a brand name, are not translatable strings."
+  },
+  "languageFrench": "Français",
+  "@languageFrench": {
+    "description": "The French language, named in French. Never translated — see languageArabic."
+  },
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "The English language, named in English. Never translated — see languageArabic."
   }
 }

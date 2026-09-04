@@ -124,5 +124,8 @@
   "customerHistoryShowingSome": "{shown} من {total} طرد",
   "customerHistoryShowAll": "عرض الكل",
   "customerPhoneNeedsReview": "تعذّرت قراءة هذا الرقم. صحّحه لتتمكن من الاتصال.",
-  "customerEdit": "تعديل"
+  "customerEdit": "تعديل",
+  "languageArabic": "العربية",
+  "languageFrench": "Français",
+  "languageEnglish": "English"
 }

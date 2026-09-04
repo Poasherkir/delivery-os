@@ -36,8 +36,11 @@ void main() {
     });
 
     test('falls back to Arabic for an unsupported language', () {
+      // Turkish and Spanish, not English: English is shipped now, so using it
+      // here would have been testing the fallback against a language that
+      // never reaches it.
       expect(
-        AppLocales.resolve(const <Locale>[Locale('en', 'US')]),
+        AppLocales.resolve(const <Locale>[Locale('tr', 'TR')]),
         AppLocales.arabic,
       );
       expect(
@@ -56,7 +59,7 @@ void main() {
       // English-first but French-second should get French, not the fallback.
       expect(
         AppLocales.resolve(const <Locale>[
-          Locale('en'),
+          Locale('tr'),
           Locale('de'),
           Locale('fr'),
           Locale('ar'),
@@ -86,7 +89,7 @@ void main() {
       expect(
         AppLocales.resolve(const <Locale>[
           Locale('fr'),
-        ], override: const Locale('en')),
+        ], override: const Locale('tr')),
         AppLocales.french,
       );
     });
@@ -122,8 +125,20 @@ void main() {
     test('isSupported matches the shipped set', () {
       expect(AppLocales.isSupported('ar'), isTrue);
       expect(AppLocales.isSupported('fr'), isTrue);
-      expect(AppLocales.isSupported('en'), isFalse);
+      expect(AppLocales.isSupported('en'), isTrue);
+      expect(AppLocales.isSupported('tr'), isFalse);
       expect(AppLocales.isSupported(''), isFalse);
+    });
+
+    test('and the shipped set is exactly these three', () {
+      // Asserted as a list, not a length: a fourth locale added without copy
+      // for it would satisfy a count and fail here, and the order is the
+      // order the language selector offers.
+      expect(AppLocales.supported, <Locale>[
+        AppLocales.arabic,
+        AppLocales.french,
+        AppLocales.english,
+      ]);
     });
   });
 }

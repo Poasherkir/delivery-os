@@ -402,4 +402,13 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get customerEdit => 'Modifier';
+
+  @override
+  String get languageArabic => 'العربية';
+
+  @override
+  String get languageFrench => 'Français';
+
+  @override
+  String get languageEnglish => 'English';
 }

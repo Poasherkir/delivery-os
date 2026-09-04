@@ -41,9 +41,10 @@ void main() {
     'a stored code that is no longer shipped degrades to follow-device',
     () async {
       // Dropping a locale in a future release must not brick the app for
-      // whoever had it selected.
+      // whoever had it selected. Turkish, not English: English ships now, so
+      // storing it would exercise the supported path rather than this one.
       final ProviderContainer container = await _container(<String, Object>{
-        LocaleController.storageKey: 'en',
+        LocaleController.storageKey: 'tr',
       });
 
       expect(container.read(localeControllerProvider), isNull);
@@ -104,7 +105,7 @@ void main() {
     expect(
       () => container
           .read(localeControllerProvider.notifier)
-          .select(const Locale('en')),
+          .select(const Locale('tr')),
       throwsArgumentError,
     );
   });

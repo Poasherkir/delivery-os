@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_l10n_ar.dart';
+import 'app_l10n_en.dart';
 import 'app_l10n_fr.dart';
 
 // ignore_for_file: type=lint
@@ -94,6 +95,7 @@ abstract class AppL10n {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('ar'),
+    Locale('en'),
     Locale('fr'),
   ];
 
@@ -828,6 +830,24 @@ abstract class AppL10n {
   /// In fr, this message translates to:
   /// **'Modifier'**
   String get customerEdit;
+
+  /// The Arabic language, named in Arabic. **Identical in every bundle and never translated.** A language picker is the one screen a driver reaches when the app is in a language they cannot read, and they find their own by recognising it — 'Arabe' is no help to someone who only reads Arabic. Endonyms, like a brand name, are not translatable strings.
+  ///
+  /// In fr, this message translates to:
+  /// **'العربية'**
+  String get languageArabic;
+
+  /// The French language, named in French. Never translated — see languageArabic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Français'**
+  String get languageFrench;
+
+  /// The English language, named in English. Never translated — see languageArabic.
+  ///
+  /// In fr, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
@@ -840,7 +860,7 @@ class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['ar', 'fr'].contains(locale.languageCode);
+      <String>['ar', 'en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppL10nDelegate old) => false;
@@ -851,6 +871,8 @@ AppL10n lookupAppL10n(Locale locale) {
   switch (locale.languageCode) {
     case 'ar':
       return AppL10nAr();
+    case 'en':
+      return AppL10nEn();
     case 'fr':
       return AppL10nFr();
   }

@@ -78,8 +78,20 @@ Violating any of these is a bug, even if the code compiles and tests pass.
    exists to prevent.
 9. **Coordinates carry a confidence tier** (0 none → 4 GPS-confirmed at
    delivery). Never route a confidence-0 stop. Never silently downgrade a pin.
-10. **AR and FR from the first screen**, with correct RTL mirroring. No
+10. **AR, FR and EN from the first screen**, with correct RTL mirroring. No
     hardcoded user-facing strings. Every new screen gets an RTL check.
+
+    Arabic first, French second, English third — that is the order of the
+    shipped set and the order the picker offers, and it is not alphabetical.
+    English is third because it is the one nobody here needs offered first.
+    The fallback for a language none of the three cover stays Arabic.
+
+    **Endonyms are the exception to "no hardcoded strings", and they are still
+    in the bundles.** Each language is named in itself — العربية, Français,
+    English — identically in all three files, because the language picker is
+    the one screen a driver reaches when the app is in a language they cannot
+    read. They live in the ARB so the raw-text guard still covers them and so
+    a future translator finds the instruction not to translate them.
 11. **No background location. No geofencing.** Foreground-only, while a route is
     active. This is a deliberate decision, not an oversight.
 12. **Routing and optimization sit behind `RoutingProvider` and `RouteOptimizer`

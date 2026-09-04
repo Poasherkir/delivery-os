@@ -8,13 +8,25 @@ import 'dart:ui' show Locale;
 abstract final class AppLocales {
   static const Locale arabic = Locale('ar');
   static const Locale french = Locale('fr');
+  static const Locale english = Locale('en');
 
   /// Order matters: this is also the order offered in the language selector.
-  static const List<Locale> supported = <Locale>[arabic, french];
+  ///
+  /// Arabic first, then French, then English — the order a driver in Algeria
+  /// is most likely to want, not alphabetical. English is third because it is
+  /// the one nobody here needs to be offered first, and putting it above
+  /// French would say something about this app that is not true.
+  static const List<Locale> supported = <Locale>[arabic, french, english];
 
-  /// Where an unsupported device language lands. Arabic, not French — most
-  /// drivers read Arabic first, and a colonial-era default would be a poor
-  /// first impression.
+  /// Where an unsupported device language lands. Arabic, not French and not
+  /// English — most drivers read Arabic first, and a colonial-era default
+  /// would be a poor first impression.
+  ///
+  /// **This is not the same as Flutter's own resolution.** A device set to
+  /// `en-GB` now matches [english] before reaching here, because English is
+  /// shipped; this constant only catches a language none of the three cover.
+  /// Adding English narrowed what falls through, which is the point of
+  /// shipping it — a Turkish phone still lands on Arabic.
   static const Locale fallback = arabic;
 
   /// Picks a locale.

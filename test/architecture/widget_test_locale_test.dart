@@ -6,12 +6,17 @@ import 'package:test/test.dart';
 ///
 /// Converting a rule that was soft since M0-07, where it was found the hard
 /// way: an RTL test was comparing RTL against RTL and passing for the wrong
-/// reason. The Flutter test runner reports `en-US`, which is not a supported
-/// locale here, so it falls back — to Arabic, the first entry in
-/// `AppLocales.supported`. A widget test that never names a locale is
-/// therefore exercising the Arabic build while reading as though it were
-/// French, and it flips the day the runner's default or the supported list
-/// changes.
+/// reason. The runner reports `en-US`, and a test that names no locale gets
+/// whatever that resolves to rather than what its author had in mind.
+///
+/// **What it resolves to has already changed once.** Before English shipped,
+/// `en-US` matched nothing and fell back to Arabic — so a silent test ran RTL
+/// while reading as LTR. Now it matches English. Both are wrong for a test
+/// that believes it is checking French, which is the point: the hazard was
+/// never the particular language, it was the locale being inherited instead
+/// of chosen. A guard that had encoded "falls back to Arabic" as its
+/// assertion would have gone green and stopped meaning anything the day the
+/// supported list grew.
 ///
 /// **Why the `MaterialApp` and not the `testWidgets` body.** The locale is
 /// decided in exactly one place — the widget that installs
