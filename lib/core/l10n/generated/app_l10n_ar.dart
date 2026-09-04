@@ -21,7 +21,7 @@ class AppL10nAr extends AppL10n {
   String get navHome => 'الرئيسية';
 
   @override
-  String get navOrders => 'الطلبات';
+  String get navOrders => 'الطرود';
 
   @override
   String get navRoute => 'المسار';
@@ -132,7 +132,7 @@ class AppL10nAr extends AppL10n {
 
   @override
   String get customersEmptyBody =>
-      'تظهر بطاقات الزبائن هنا بمجرد تسجيل أول طلب.';
+      'تظهر بطاقات الزبائن هنا بمجرد تسجيل أول طرد.';
 
   @override
   String get customersNoResults => 'لا توجد نتائج لهذا البحث.';
@@ -205,12 +205,12 @@ class AppL10nAr extends AppL10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count طلب',
-      many: '$count طلبًا',
-      few: '$count طلبات',
-      two: 'طلبان',
-      one: 'طلب واحد',
-      zero: 'لا توجد طلبات',
+      other: '$count طرد',
+      many: '$count طردًا',
+      few: '$count طرود',
+      two: 'طردان',
+      one: 'طرد واحد',
+      zero: 'لا توجد طرود',
     );
     return '$_temp0';
   }

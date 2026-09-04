@@ -204,7 +204,7 @@ void main() {
       // Two different empties: this one is "there is nothing yet", and it has
       // to explain rather than look like a failed search.
       expect(find.text('Aucun client'), findsOneWidget);
-      expect(find.textContaining('dès la première commande'), findsOneWidget);
+      expect(find.textContaining('dès le premier colis'), findsOneWidget);
     });
 
     testWidgets('a search that matches nothing says something else', (
@@ -374,7 +374,7 @@ void main() {
 
       expect(find.byKey(const Key('customerForm.existing')), findsOneWidget);
       expect(find.text('Amine Bensalem'), findsOneWidget);
-      expect(find.text('12 commandes'), findsOneWidget);
+      expect(find.text('12 colis'), findsOneWidget);
       expect(find.byKey(const Key('customerForm.useExisting')), findsOneWidget);
     });
 

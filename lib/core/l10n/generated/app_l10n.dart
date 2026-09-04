@@ -123,10 +123,10 @@ abstract class AppL10n {
   /// **'Accueil'**
   String get navHome;
 
-  /// Bottom-nav destination and screen title: today's orders. The batch is a grouping inside this screen, not its own destination.
+  /// Bottom-nav destination and screen title: today's parcels. `Colis`, not `Commandes` — a commande is what the customer placed on a website; what the driver is carrying is a colis, and this label sits under their thumb all day. The destination stays `AppDestination.orders` in code, where `Order` is the domain's word for the row. The batch is a grouping inside this screen, not its own destination.
   ///
   /// In fr, this message translates to:
-  /// **'Commandes'**
+  /// **'Colis'**
   String get navOrders;
 
   /// Bottom-nav destination and screen title: the optimized route.
@@ -333,10 +333,10 @@ abstract class AppL10n {
   /// **'Aucun client'**
   String get customersEmptyTitle;
 
-  /// Says where customers come from. A driver does not create customers directly; they arrive with order entry.
+  /// Says where customers come from. A driver does not create customers directly; they arrive with parcel entry.
   ///
   /// In fr, this message translates to:
-  /// **'Les clients apparaissent ici dès la première commande saisie.'**
+  /// **'Les clients apparaissent ici dès le premier colis saisi.'**
   String get customersEmptyBody;
 
   /// A search matched nothing. Deliberately different from customersEmptyTitle: one means try another word, the other means there is nothing yet.
@@ -465,10 +465,10 @@ abstract class AppL10n {
   /// **'Vous avez déjà ce client'**
   String get customerLookupExisting;
 
-  /// Order count on the existing-customer card. It is the fastest way for a driver to recognise whether this is the person they mean.
+  /// Parcel count on the existing-customer card, shown at entry and on the customer form. It is the fastest way for a driver to recognise whether this is the person they mean — two Amines are common, one with forty parcels is not. `colis` is invariable in French, so only the article changes across the plural forms, and `Aucun` replaces the feminine `Aucune` that agreed with `commande`.
   ///
   /// In fr, this message translates to:
-  /// **'{count, plural, =0{Aucune commande} =1{1 commande} other{{count} commandes}}'**
+  /// **'{count, plural, =0{Aucun colis} =1{1 colis} other{{count} colis}}'**
   String customerLookupOrders(int count);
 
   /// One tap to reuse the existing customer instead of creating a second record for the same person.

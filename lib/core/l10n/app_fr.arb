@@ -16,9 +16,9 @@
   "@navHome": {
     "description": "Bottom-nav destination and screen title: the daily dashboard."
   },
-  "navOrders": "Commandes",
+  "navOrders": "Colis",
   "@navOrders": {
-    "description": "Bottom-nav destination and screen title: today's orders. The batch is a grouping inside this screen, not its own destination."
+    "description": "Bottom-nav destination and screen title: today's parcels. `Colis`, not `Commandes` — a commande is what the customer placed on a website; what the driver is carrying is a colis, and this label sits under their thumb all day. The destination stays `AppDestination.orders` in code, where `Order` is the domain's word for the row. The batch is a grouping inside this screen, not its own destination."
   },
   "navRoute": "Itinéraire",
   "@navRoute": {
@@ -156,9 +156,9 @@
   "@customersEmptyTitle": {
     "description": "Empty state on the Customers screen, when none exist at all. Distinct from a search that matched nothing."
   },
-  "customersEmptyBody": "Les clients apparaissent ici dès la première commande saisie.",
+  "customersEmptyBody": "Les clients apparaissent ici dès le premier colis saisi.",
   "@customersEmptyBody": {
-    "description": "Says where customers come from. A driver does not create customers directly; they arrive with order entry."
+    "description": "Says where customers come from. A driver does not create customers directly; they arrive with parcel entry."
   },
   "customersNoResults": "Aucun résultat pour cette recherche.",
   "@customersNoResults": {
@@ -250,9 +250,9 @@
   "@customerLookupExisting": {
     "description": "Heading on the card shown when the number typed already belongs to someone. Phrased as a fact the driver owns rather than as a warning — finding an existing customer is the good outcome, because it saves retyping a name and an address."
   },
-  "customerLookupOrders": "{count, plural, =0{Aucune commande} =1{1 commande} other{{count} commandes}}",
+  "customerLookupOrders": "{count, plural, =0{Aucun colis} =1{1 colis} other{{count} colis}}",
   "@customerLookupOrders": {
-    "description": "Order count on the existing-customer card. It is the fastest way for a driver to recognise whether this is the person they mean.",
+    "description": "Parcel count on the existing-customer card, shown at entry and on the customer form. It is the fastest way for a driver to recognise whether this is the person they mean — two Amines are common, one with forty parcels is not. `colis` is invariable in French, so only the article changes across the plural forms, and `Aucun` replaces the feminine `Aucune` that agreed with `commande`.",
     "placeholders": {
       "count": {
         "type": "int",

@@ -408,7 +408,7 @@ void main() {
     setUp(() async {
       await companies.create(name: 'Yalidine');
       // Somebody with a history, so the count on the card has something to
-      // say. A record with no parcels would render "Aucune commande", which
+      // say. A record with no parcels would render "Aucun colis", which
       // is true but does not exercise the recognition aid.
       final Customer amine = await customers.create(
         phone: PhoneE164.parse('0550123456'),
@@ -462,7 +462,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 
-      expect(find.text('3 commandes'), findsOneWidget);
+      expect(find.text('3 colis'), findsOneWidget);
     });
 
     testWidgets('and stops asking for a name', (WidgetTester tester) async {

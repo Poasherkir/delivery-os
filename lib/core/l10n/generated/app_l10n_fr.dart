@@ -21,7 +21,7 @@ class AppL10nFr extends AppL10n {
   String get navHome => 'Accueil';
 
   @override
-  String get navOrders => 'Commandes';
+  String get navOrders => 'Colis';
 
   @override
   String get navRoute => 'Itinéraire';
@@ -135,7 +135,7 @@ class AppL10nFr extends AppL10n {
 
   @override
   String get customersEmptyBody =>
-      'Les clients apparaissent ici dès la première commande saisie.';
+      'Les clients apparaissent ici dès le premier colis saisi.';
 
   @override
   String get customersNoResults => 'Aucun résultat pour cette recherche.';
@@ -208,9 +208,9 @@ class AppL10nFr extends AppL10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count commandes',
-      one: '1 commande',
-      zero: 'Aucune commande',
+      other: '$count colis',
+      one: '1 colis',
+      zero: 'Aucun colis',
     );
     return '$_temp0';
   }
