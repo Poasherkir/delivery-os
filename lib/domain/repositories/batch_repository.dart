@@ -30,6 +30,41 @@ final class BatchNotOpenException implements Exception {
       '${isDeleted ? ', deleted' : ''})';
 }
 
+/// Raised when a batch cannot be closed because parcels are still unresolved.
+///
+/// Carries the count so a screen can say what is left rather than only that it
+/// refused. `OrderStatus.isOpen` is the definition — `pending`, `onRoute`,
+/// `arrived` and `failed` — and `failed` is the one that matters: it means the
+/// disposition is still undecided, so the money is undecided, so the day
+/// cannot be totalled.
+final class BatchHasOpenOrdersException implements Exception {
+  const BatchHasOpenOrdersException({
+    required this.batchId,
+    required this.openOrders,
+  });
+
+  final String batchId;
+  final int openOrders;
+
+  @override
+  String toString() =>
+      'BatchHasOpenOrdersException($batchId, $openOrders unresolved)';
+}
+
+/// Raised when reopening something that is not closed.
+///
+/// A settled batch reaches this too, and that refusal is invariant 7: once
+/// `daily_settlements` holds a row, corrections are adjustments, never edits.
+final class BatchNotClosedException implements Exception {
+  const BatchNotClosedException({required this.batchId, required this.status});
+
+  final String batchId;
+  final BatchStatus status;
+
+  @override
+  String toString() => 'BatchNotClosedException($batchId, ${status.name})';
+}
+
 /// The day's batch, as `features/` sees it.
 ///
 /// One method. Batch lifecycle — closing, settling, reopening, listing, the

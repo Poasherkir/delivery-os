@@ -72,6 +72,9 @@ final class _Fixture {
   /// Same, for the mutations that need an existing order.
   Order? pendingOrder;
 
+  /// Same, for the mutations that act on a batch.
+  Batch? pendingBatch;
+
   CustomerDao get customers => CustomerDao(
     database: db,
     clock: clock,
@@ -233,6 +236,38 @@ final List<_Mutation> _mutations = <_Mutation>[
       companyId: f.pendingCompany!.id,
       serviceDate: '2026-09-01',
     ),
+  ),
+  (
+    dao: 'BatchDao',
+    method: 'close',
+    // The batch is opened in prepare because opening queues a row of its own.
+    // It closes with no orders on it: the precondition has its own tests, and
+    // this one is only asking whether closing queues exactly one command.
+    prepare: (_Fixture f) async {
+      f.pendingCompany = await f.aCompany('Yalidine');
+      f.pendingBatch = await f.batches.ensureOpenBatch(
+        ownerId: f.userId,
+        companyId: f.pendingCompany!.id,
+        serviceDate: '2026-09-01',
+      );
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) => f.batches.close(f.pendingBatch!),
+  ),
+  (
+    dao: 'BatchDao',
+    method: 'reopen',
+    prepare: (_Fixture f) async {
+      f.pendingCompany = await f.aCompany('Yalidine');
+      final Batch opened = await f.batches.ensureOpenBatch(
+        ownerId: f.userId,
+        companyId: f.pendingCompany!.id,
+        serviceDate: '2026-09-01',
+      );
+      f.pendingBatch = await f.batches.close(opened);
+      return null;
+    },
+    invoke: (_Fixture f, Customer? _) => f.batches.reopen(f.pendingBatch!),
   ),
   (
     dao: 'OrderDao',

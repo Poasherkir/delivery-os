@@ -8,7 +8,11 @@ import 'package:drift/drift.dart' hide Batch;
 import '../../../core/time/clock.dart';
 import '../../../core/utils/uuid_v7.dart';
 import '../../../domain/repositories/batch_repository.dart'
-    show BatchNotOpenException;
+    show
+        BatchHasOpenOrdersException,
+        BatchNotClosedException,
+        BatchNotOpenException;
+import '../../../domain/state/order_status.dart';
 import '../../../domain/value_objects/batch_status.dart';
 import '../../../domain/value_objects/ledger_enums.dart';
 import '../app_database.dart';
@@ -121,4 +125,199 @@ final class BatchDao {
       return created;
     });
   }
+
+  /// Every batch for a service date, whatever its status.
+  ///
+  /// Includes the closed, because the batch list's whole job is to show a day
+  /// that is finished as finished. Excludes the soft-deleted, which nothing
+  /// creates.
+  Future<List<Batch>> forDate({
+    required String ownerId,
+    required String serviceDate,
+  }) {
+    return (_db.select(_db.batches)
+          ..where(
+            ($BatchesTable b) =>
+                b.ownerId.equals(ownerId) &
+                b.serviceDate.equals(serviceDate) &
+                b.deletedAt.isNull(),
+          )
+          ..orderBy(<OrderClauseGenerator<$BatchesTable>>[
+            ($BatchesTable b) => OrderingTerm(expression: b.id),
+          ]))
+        .get();
+  }
+
+  Future<Batch?> byId(String id) => (_db.select(
+    _db.batches,
+  )..where(($BatchesTable b) => b.id.equals(id))).getSingleOrNull();
+
+  /// Closes a batch: the day's deliveries are finished, the money is not yet
+  /// confirmed.
+  ///
+  /// **Refuses while any order is still open.** `OrderStatus.isOpen` covers
+  /// `pending`, `onRoute`, `arrived` and `failed`, and the last of those is the
+  /// reason this check is not merely tidiness: `failed` means the disposition
+  /// is undecided, so the money is undecided, so the day cannot be totalled.
+  /// §12.3 states it as the settlement precondition; enforcing it one step
+  /// earlier means a batch never reaches M3 in a state M3 has to reject.
+  ///
+  /// Throws [BatchNotOpenException] if the batch is not currently open —
+  /// closing a settled batch would be rewriting a day whose money is already
+  /// confirmed, which is invariant 7.
+  ///
+  /// Throws [BatchHasOpenOrdersException] naming how many are unresolved, so a
+  /// screen can say what is left rather than only that it refused.
+  Future<Batch> close(Batch current) {
+    return _db.transaction(() async {
+      final Batch batch = await _requireOpen(current.id);
+      final int open = await _openOrderCount(batch.id);
+      if (open > 0) {
+        throw BatchHasOpenOrdersException(batchId: batch.id, openOrders: open);
+      }
+
+      final EntityStamp stamp = EntityStamper(_clock).forUpdate(batch.stamp);
+      await (_db.update(
+        _db.batches,
+      )..where(($BatchesTable b) => b.id.equals(batch.id))).write(
+        BatchesCompanion(
+          status: const Value<BatchStatus>(BatchStatus.closed),
+          closedAt: Value<DateTime?>(stamp.updatedAt),
+          updatedAt: Value<DateTime>(stamp.updatedAt),
+          version: Value<int>(stamp.version),
+        ),
+      );
+
+      await _queue(
+        batch.id,
+        OutboxOperation.update,
+        stamp.updatedAt,
+        <String, Object?>{'status': BatchStatus.closed.name},
+      );
+
+      return (_db.select(
+        _db.batches,
+      )..where(($BatchesTable b) => b.id.equals(batch.id))).getSingle();
+    });
+  }
+
+  /// Reopens a closed batch, so a parcel the driver forgot can still be added.
+  ///
+  /// **A settled batch is never reopened.** Once `daily_settlements` holds a
+  /// row the numbers are frozen and corrections become
+  /// `settlement_adjustments` (invariant 7); reopening would let an edit
+  /// silently contradict a settlement already computed from it. Closed is a
+  /// pause, settled is a fact.
+  ///
+  /// `closed_at` is cleared, because it records when the day finished and the
+  /// day has not finished. The version still increments — a reopen is a write.
+  Future<Batch> reopen(Batch current) {
+    return _db.transaction(() async {
+      final Batch? batch = await byId(current.id);
+      if (batch == null || batch.deletedAt != null) {
+        throw StateError('batch ${current.id} no longer exists');
+      }
+      if (batch.status != BatchStatus.closed) {
+        throw BatchNotClosedException(batchId: batch.id, status: batch.status);
+      }
+
+      final EntityStamp stamp = EntityStamper(_clock).forUpdate(batch.stamp);
+      await (_db.update(
+        _db.batches,
+      )..where(($BatchesTable b) => b.id.equals(batch.id))).write(
+        BatchesCompanion(
+          status: const Value<BatchStatus>(BatchStatus.open),
+          closedAt: const Value<DateTime?>(null),
+          updatedAt: Value<DateTime>(stamp.updatedAt),
+          version: Value<int>(stamp.version),
+        ),
+      );
+
+      await _queue(
+        batch.id,
+        OutboxOperation.update,
+        stamp.updatedAt,
+        <String, Object?>{'status': BatchStatus.open.name},
+      );
+
+      return (_db.select(
+        _db.batches,
+      )..where(($BatchesTable b) => b.id.equals(batch.id))).getSingle();
+    });
+  }
+
+  /// How many of a batch's live orders still hold it open.
+  ///
+  /// Counted in SQL rather than by fetching and filtering: a batch is fifteen
+  /// rows today and a re-import could make it far more, and this runs on every
+  /// close attempt.
+  Future<int> _openOrderCount(String batchId) async {
+    final List<String> holding = <String>[
+      for (final OrderStatus status in OrderStatus.values)
+        if (status.isOpen) status.name,
+    ];
+
+    final QueryRow row = await _db
+        .customSelect(
+          'SELECT count(*) AS c FROM orders '
+          'WHERE batch_id = ?1 AND deleted_at IS NULL '
+          'AND status IN (${List<String>.filled(holding.length, '?').join(', ')})',
+          variables: <Variable<Object>>[
+            Variable<String>(batchId),
+            for (final String status in holding) Variable<String>(status),
+          ],
+          readsFrom: <ResultSetImplementation<HasResultSet, Object>>{
+            _db.orders,
+          },
+        )
+        .getSingle();
+
+    return row.read<int>('c');
+  }
+
+  Future<Batch> _requireOpen(String id) async {
+    final Batch? batch = await byId(id);
+    if (batch == null) {
+      throw StateError('batch $id no longer exists');
+    }
+    if (batch.status != BatchStatus.open || batch.deletedAt != null) {
+      throw BatchNotOpenException(
+        batchId: batch.id,
+        status: batch.status,
+        isDeleted: batch.deletedAt != null,
+      );
+    }
+    return batch;
+  }
+
+  Future<void> _queue(
+    String batchId,
+    OutboxOperation operation,
+    DateTime at,
+    Map<String, Object?> payload,
+  ) {
+    return _db
+        .into(_db.outbox)
+        .insert(
+          OutboxCompanion.insert(
+            id: _uuid.next(),
+            entityType: 'batch',
+            entityId: batchId,
+            operation: operation,
+            payload: jsonEncode(payload),
+            deviceId: _deviceId,
+            createdAt: at,
+          ),
+        );
+  }
+}
+
+/// The audit columns as an [EntityStamp], so a DAO never assembles one by hand.
+extension BatchStamp on Batch {
+  EntityStamp get stamp => EntityStamp(
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    deletedAt: deletedAt,
+    version: version,
+  );
 }
