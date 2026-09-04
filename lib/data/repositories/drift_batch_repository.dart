@@ -1,6 +1,7 @@
 import '../../core/time/clock.dart';
 import '../../core/time/service_day.dart';
 import '../../domain/entities/batch.dart';
+import '../../domain/entities/batch_summary.dart';
 import '../../domain/repositories/batch_repository.dart';
 import '../db/app_database.dart' as db;
 import '../db/daos/batch_dao.dart';
@@ -37,6 +38,50 @@ final class DriftBatchRepository implements BatchRepository {
       serviceDate: serviceDate ?? ServiceDay.from(_clock.nowUtc()),
     ),
   );
+
+  @override
+  Future<List<BatchSummary>> summariesForDate({String? serviceDate}) async {
+    final List<BatchSummaryRow> rows = await _dao.summariesForDate(
+      ownerId: _ownerId,
+      serviceDate: serviceDate ?? ServiceDay.from(_clock.nowUtc()),
+    );
+
+    return rows
+        .map(
+          (BatchSummaryRow r) => BatchSummary(
+            id: r.id,
+            companyName: r.companyName,
+            serviceDate: r.serviceDate,
+            status: r.status,
+            version: r.version,
+            totalOrders: r.totalOrders,
+            openOrders: r.openOrders,
+            expectedCollection: r.expectedCollection,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> close(String batchId) async =>
+      _dao.close(await _require(batchId));
+
+  @override
+  Future<void> reopen(String batchId) async =>
+      _dao.reopen(await _require(batchId));
+
+  /// The stored row behind an id, re-read rather than reconstructed.
+  ///
+  /// Same reasoning as `DriftCustomerRepository._row`: the DAO stamps from the
+  /// version it is handed, and a row rebuilt from a summary that has been on
+  /// screen for a minute would carry a stale one.
+  Future<db.Batch> _require(String batchId) async {
+    final db.Batch? row = await _dao.byId(batchId);
+    if (row == null) {
+      throw StateError('batch $batchId no longer exists');
+    }
+    return row;
+  }
 
   Batch _toDomain(db.Batch row) => Batch(
     id: row.id,

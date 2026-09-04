@@ -1,4 +1,5 @@
 import '../entities/batch.dart';
+import '../entities/batch_summary.dart';
 import '../value_objects/batch_status.dart';
 
 /// Raised when the day's batch exists but cannot take orders.
@@ -87,4 +88,17 @@ abstract interface class BatchRepository {
     required String companyId,
     String? serviceDate,
   });
+
+  /// Every batch for a service date, with its counts.
+  ///
+  /// [serviceDate] defaults to the current service day.
+  Future<List<BatchSummary>> summariesForDate({String? serviceDate});
+
+  /// Closes a batch. Throws [BatchHasOpenOrdersException] when parcels are
+  /// still unresolved, and [BatchNotOpenException] when it is not open.
+  Future<void> close(String batchId);
+
+  /// Reopens a closed batch. Throws [BatchNotClosedException] otherwise — a
+  /// settled batch is never reopened.
+  Future<void> reopen(String batchId);
 }

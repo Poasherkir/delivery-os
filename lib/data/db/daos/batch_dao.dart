@@ -14,6 +14,7 @@ import '../../../domain/repositories/batch_repository.dart'
         BatchNotOpenException;
 import '../../../domain/state/order_status.dart';
 import '../../../domain/value_objects/batch_status.dart';
+import '../../../domain/value_objects/centimes.dart';
 import '../../../domain/value_objects/ledger_enums.dart';
 import '../app_database.dart';
 import '../conventions/entity_stamp.dart';
@@ -151,6 +152,74 @@ final class BatchDao {
   Future<Batch?> byId(String id) => (_db.select(
     _db.batches,
   )..where(($BatchesTable b) => b.id.equals(id))).getSingleOrNull();
+
+  /// Every batch for a day, with its company and its parcel counts.
+  ///
+  /// One query. The alternative — list the batches, then count orders per
+  /// batch — is a round trip per company, on a screen a driver opens to decide
+  /// whether the day is finished.
+  ///
+  /// The open count is computed in the same pass with a conditional sum rather
+  /// than a second query, because it and the total are two views of one set and
+  /// fetching them separately could disagree if a write landed between them.
+  Future<List<BatchSummaryRow>> summariesForDate({
+    required String ownerId,
+    required String serviceDate,
+  }) async {
+    final List<String> holding = <String>[
+      for (final OrderStatus status in OrderStatus.values)
+        if (status.isOpen) status.name,
+    ];
+    final String placeholders = List<String>.generate(
+      holding.length,
+      (int i) => '?${i + 3}',
+    ).join(', ');
+
+    final List<QueryRow> rows = await _db
+        .customSelect(
+          'SELECT b.id, b.service_date, b.status, b.version, '
+          'cmp.name AS company_name, '
+          'count(o.id) AS total_orders, '
+          'coalesce(sum(CASE WHEN o.status IN ($placeholders) THEN 1 ELSE 0 '
+          'END), 0) AS open_orders, '
+          'coalesce(sum(o.cod_amount), 0) AS expected_collection '
+          'FROM batches b '
+          'JOIN companies cmp ON cmp.id = b.company_id '
+          'LEFT JOIN orders o ON o.batch_id = b.id AND o.deleted_at IS NULL '
+          'WHERE b.owner_id = ?1 AND b.service_date = ?2 '
+          'AND b.deleted_at IS NULL '
+          'GROUP BY b.id '
+          'ORDER BY cmp.name, b.id',
+          variables: <Variable<Object>>[
+            Variable<String>(ownerId),
+            Variable<String>(serviceDate),
+            for (final String status in holding) Variable<String>(status),
+          ],
+          readsFrom: <ResultSetImplementation<HasResultSet, Object>>{
+            _db.batches,
+            _db.companies,
+            _db.orders,
+          },
+        )
+        .get();
+
+    return rows
+        .map(
+          (QueryRow r) => (
+            id: r.read<String>('id'),
+            companyName: r.read<String>('company_name'),
+            serviceDate: r.read<String>('service_date'),
+            status: _db.batches.status.converter.fromSql(
+              r.read<String>('status'),
+            ),
+            version: r.read<int>('version'),
+            totalOrders: r.read<int>('total_orders'),
+            openOrders: r.read<int>('open_orders'),
+            expectedCollection: Centimes(r.read<int>('expected_collection')),
+          ),
+        )
+        .toList();
+  }
 
   /// Closes a batch: the day's deliveries are finished, the money is not yet
   /// confirmed.
@@ -311,6 +380,18 @@ final class BatchDao {
         );
   }
 }
+
+/// One joined batch row, before it crosses into `domain/`.
+typedef BatchSummaryRow = ({
+  String id,
+  String companyName,
+  String serviceDate,
+  BatchStatus status,
+  int version,
+  int totalOrders,
+  int openOrders,
+  Centimes expectedCollection,
+});
 
 /// The audit columns as an [EntityStamp], so a DAO never assembles one by hand.
 extension BatchStamp on Batch {
